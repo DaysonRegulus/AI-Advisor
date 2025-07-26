@@ -1,0 +1,9 @@
+backend/venv/
+*.pyc
+__pycache__/
+
+frontend/.dart_tool/
+frontend/.idea/
+frontend/build/
+frontend/.packages
+.env

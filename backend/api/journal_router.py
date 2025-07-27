@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from supabase import Client
 import asyncio
+from typing import List
 
 # Our project imports
 from dependencies import get_supabase_client
@@ -133,6 +134,18 @@ async def get_journal_comments(entry_id: str, supabase: Client = Depends(get_sup
     """
     try:
         res = supabase.table("journal_comments").select("agent_name, comment_text").eq("entry_id", entry_id).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/journal/all/{user_id}", response_model=List[JournalEntryResponse])
+async def get_all_journal_entries(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    """Fetches all journal entries for a user, most recent first."""
+    try:
+        res = supabase.table("journal_entries").select("*") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .execute()
         return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/daily_summary_provider.dart';
+import 'providers/journal_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/main_scaffold.dart';
 
@@ -20,7 +21,8 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => UserProfileProvider()),
-        ChangeNotifierProvider(create: (context) => DailySummaryProvider()), // <-- Add new provider
+        ChangeNotifierProvider(create: (context) => DailySummaryProvider()),
+        ChangeNotifierProvider(create: (context) => JournalProvider()), // <-- Add new provider
       ],
       child: MaterialApp(
         title: 'Personal AI Advisor',

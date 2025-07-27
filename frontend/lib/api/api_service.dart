@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user_profile.dart';
 import '../models/daily_summary.dart';
+import '../models/journal_entry.dart';
+import '../models/ai_comment.dart';
 
 class ApiService {
   // IMPORTANT: Use this IP for the Android Emulator to connect to your local machine.
@@ -144,8 +146,24 @@ class ApiService {
     }
   }
 
+  // --- NEW: Get All Journal Entries ---
+  Future<List<JournalEntry>> getJournalEntries() async {
+    final url = Uri.parse('$_baseUrl/journal/all/$_testUserId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => JournalEntry.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching journal entries: $e');
+      return [];
+    }
+  }
+
   // --- Add Journal Entry Method ---
-  Future<bool> addJournalEntry(String content) async {
+  Future<JournalEntry?> addJournalEntry(String content) async {
     final url = Uri.parse('$_baseUrl/journal/add');
     print('Calling API to add journal entry...');
     try {
@@ -158,16 +176,32 @@ class ApiService {
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) { // We changed the backend to return 201 Created
         print('Journal entry added successfully.');
-        return true;
+        return JournalEntry.fromJson(jsonDecode(response.body));
       } else {
         print('API Error adding journal entry: ${response.statusCode} ${response.body}');
-        return false;
+        return null;
       }
     } catch (e) {
       print('Network error adding journal entry: $e');
-      return false;
+      return null;
+    }
+  }
+
+  // --- NEW: Get Comments for an Entry ---
+  Future<List<AIComment>> getJournalComments(String entryId) async {
+    final url = Uri.parse('$_baseUrl/journal/comments/$entryId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => AIComment.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching comments: $e');
+      return [];
     }
   }
 }

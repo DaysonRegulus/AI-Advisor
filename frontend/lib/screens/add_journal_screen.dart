@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../api/api_service.dart';
 import '../providers/user_profile_provider.dart';
+import '../providers/journal_provider.dart';
 
 // The class name is 'AddJournalScreen'
 class AddJournalScreen extends StatefulWidget {
@@ -28,32 +29,23 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
 
     setState(() { _isSaving = true; });
 
-    final success = await _apiService.addJournalEntry(_controller.text);
+    // Call the provider to add the entry and trigger background tasks
+    await Provider.of<JournalProvider>(context, listen: false).addJournalEntry(_controller.text);
+    
+    // Also award XP via the UserProfileProvider
+    await Provider.of<UserProfileProvider>(context, listen: false).awardXpForEvent('journal_entry_added', 15);
 
-    if (mounted) { // Good practice: check if the widget is still in the tree
-      setState(() { _isSaving = false; });
+    setState(() { _isSaving = false; });
 
-      if (success) {
-        // This now just updates the local state. The backend already awarded XP.
-        // We await this to ensure the state is updated before popping.
-        await Provider.of<UserProfileProvider>(context, listen: false)
-            .awardXpForEvent('journal_entry_added', 15);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Journal entry saved! +15 XP'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.of(context).pop();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error: Could not save journal entry.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (mounted) { // Check if the widget is still in the tree
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Journal entry saved! Agents are now reviewing it.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Pass 'true' back to signal that an entry was added
+      Navigator.of(context).pop(true);
     }
   }
 

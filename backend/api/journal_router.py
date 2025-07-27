@@ -1,95 +1,138 @@
 # api/journal_router.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from supabase import Client
-import httpx  # A modern, async-friendly HTTP client library
+import asyncio
 
 # Our project imports
 from dependencies import get_supabase_client
+from services.gemini_service import get_ai_response
+from services.memory_service import construct_memory_stream
+from core.personas import EXPERT_PERSONAS
 
 router = APIRouter()
 
-# --- Pydantic Models ---
+# --- Data Models ---
 class JournalEntryRequest(BaseModel):
     user_id: str
     content: str
 
-# --- Configuration for XP Reward ---
-# It's a best practice to keep configurable values like this in one place.
-XP_AWARD_FOR_JOURNAL_ENTRY = 15
+class JournalEntryResponse(BaseModel):
+    id: str
+    user_id: str
+    content: str
+    created_at: str
 
-# --- The Endpoint ---
-@router.post(
-    "/journal/add",
-    summary="Add a new journal entry",
-    description="Saves a user's journal entry to the database and awards them XP."
-)
+class AIComment(BaseModel):
+    agent_name: str
+    comment_text: str
+
+# --- Background Task for Generating Comments ---
+
+async def generate_and_save_comments(entry_id: str, entry_content: str, user_id: str, supabase: Client):
+    """
+    This function runs in the background. It gets comments from all agents and saves them.
+    """
+    print(f"BACKGROUND TASK: Started comment generation for entry_id: {entry_id}")
+
+    # The prompt for the comment generation
+    comment_prompt = f"""
+    Based on your specific role and your entire memory of this user, please analyze the following journal entry written by them.
+    
+    Journal Entry: "{entry_content}"
+
+    Provide a brief, encouraging, and insightful comment (1-3 sentences). Your comment should be directly actionable or promote self-reflection.
+    If the entry is entirely irrelevant to your domain of expertise, you MUST respond with only the exact text 'NO_COMMENT' and nothing else.
+    """
+
+    # Prepare concurrent tasks for all agents
+    tasks = []
+    agents_to_query = [name for name in EXPERT_PERSONAS if name != "master_overseer"]
+
+    for agent_name in agents_to_query:
+        # We create a coroutine for each agent call
+        task = get_single_agent_comment(agent_name, comment_prompt, user_id, supabase)
+        tasks.append(task)
+    
+    # Run all API calls concurrently
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    valid_comments = []
+    for agent_name, result in zip(agents_to_query, results):
+        if isinstance(result, Exception):
+            print(f"Error getting comment from {agent_name}: {result}")
+        elif result and result.strip() != "NO_COMMENT":
+            valid_comments.append({
+                "entry_id": entry_id,
+                "agent_name": agent_name,
+                "comment_text": result.strip()
+            })
+    
+    # Save valid comments to a new database table
+    if valid_comments:
+        try:
+            # We need a new table: 'journal_comments'
+            supabase.table("journal_comments").insert(valid_comments).execute()
+            print(f"BACKGROUND TASK: Successfully saved {len(valid_comments)} comments for entry {entry_id}.")
+        except Exception as e:
+            print(f"BACKGROUND TASK ERROR: Could not save comments to database. Error: {e}")
+
+async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, supabase: Client) -> str:
+    """Helper coroutine to get a comment from one agent."""
+    persona = EXPERT_PERSONAS[agent_name]
+    memory = construct_memory_stream(user_id, agent_name, supabase)
+    response = get_ai_response(
+        persona_prompt=persona,
+        user_message=prompt,
+        chat_history=memory
+    )
+    return response
+
+# --- API Endpoints ---
+
+@router.post("/journal/add", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
 async def add_journal_entry(
     request: JournalEntryRequest,
+    background_tasks: BackgroundTasks,
     supabase: Client = Depends(get_supabase_client)
 ):
     """
-    Handles saving a new journal entry.
-    1. Saves the content to the 'journal_entries' table.
-    2. On success, makes an internal call to the 'award-xp' endpoint.
+    Saves a journal entry and triggers AI comment generation in the background.
     """
-    # 1. --- Save the journal entry ---
     try:
-        print(f"Saving journal entry for user: {request.user_id}")
         insert_res = supabase.table("journal_entries").insert({
             "user_id": request.user_id,
             "content": request.content
         }).execute()
-
-        # The Supabase python client v1 returns a list in 'data'. If it's empty, something went wrong.
-        if not insert_res.data:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to save journal entry to the database."
-            )
         
-        print("Journal entry saved successfully.")
+        if not insert_res.data:
+            raise HTTPException(status_code=500, detail="Failed to save journal entry.")
+        
+        new_entry = insert_res.data[0]
+        
+        # Add the comment generation task to run in the background after the response is sent
+        background_tasks.add_task(
+            generate_and_save_comments,
+            entry_id=new_entry['id'],
+            entry_content=new_entry['content'],
+            user_id=new_entry['user_id'],
+            supabase=supabase
+        )
+        
+        # Immediately return the created journal entry to the user
+        return new_entry
 
     except Exception as e:
-        print(f"ERROR: Could not save journal entry. Error: {e}")
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while saving the entry: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=str(e))
 
-    # 2. --- Award XP via internal API call ---
-    # Why do this instead of just calling the function?
-    # This keeps our services decoupled. The journal service doesn't need to know
-    # the implementation details of the XP system. It just knows there's an endpoint for it.
-    # This makes the system more modular and easier to maintain.
+@router.get("/journal/comments/{entry_id}", response_model=List[AIComment])
+async def get_journal_comments(entry_id: str, supabase: Client = Depends(get_supabase_client)):
+    """
+    Fetches all saved AI comments for a specific journal entry.
+    """
     try:
-        # We use an async HTTP client for this server-to-server call.
-        async with httpx.AsyncClient() as client:
-            # The URL for our running FastAPI application
-            # NOTE: This assumes the server is running on localhost:8000
-            xp_award_url = "http://127.0.0.1:8000/api/user/award-xp"
-            xp_payload = {
-                "user_id": request.user_id,
-                "amount": XP_AWARD_FOR_JOURNAL_ENTRY,
-                "event_name": "journal_entry_added"
-            }
-            
-            print(f"Making internal call to award {XP_AWARD_FOR_JOURNAL_ENTRY} XP...")
-            response = await client.post(xp_award_url, json=xp_payload)
-            
-            # This will raise an exception if the status code is 4xx or 5xx
-            response.raise_for_status()
-            
-            print("XP awarded successfully via internal API call.")
-
-    except httpx.HTTPStatusError as e:
-        # This is a critical warning. The user saved their journal but didn't get XP.
-        # In a production system, you might log this for manual correction or use a retry mechanism.
-        print(f"CRITICAL WARNING: Journal entry was saved, but failed to award XP. Status: {e.response.status_code}, Response: {e.response.text}")
-        # We don't raise an exception here because the main action (saving the journal) was successful.
-        # It's better to return success to the user.
-
-    return {"status": "success", "message": "Journal entry saved and XP awarded."}
+        res = supabase.table("journal_comments").select("agent_name, comment_text").eq("entry_id", entry_id).execute()
+        return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

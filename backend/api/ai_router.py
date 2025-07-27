@@ -9,6 +9,7 @@ import datetime
 from dependencies import get_supabase_client
 from services.gemini_service import get_ai_response
 from core.personas import EXPERT_PERSONAS
+from services.memory_service import construct_memory_stream
 
 # Create an APIRouter instance. This is like a mini-FastAPI app.
 router = APIRouter()
@@ -63,29 +64,8 @@ def interact_with_ai(
     print(f"Request received for agent '{request.agent_name}' from user '{request.user_id}'")
     persona = EXPERT_PERSONAS[request.agent_name]
 
-    # 2. --- Fetch Conversation History (The "Memory") ---
-    chat_history_for_gemini = []
-    try:
-        print("Fetching chat history from Supabase...")
-        # Fetch the last 10 turns (5 user, 5 model) of conversation for this specific agent.
-        # Sorting by 'created_at' ascending ensures we get the history in the correct order.
-        history_response = supabase.table("ai_interactions").select("user_message, ai_response") \
-            .eq("user_id", request.user_id) \
-            .eq("agent_name", request.agent_name) \
-            .order("created_at", desc=False) \
-            .limit(10) \
-            .execute()
-        
-        if history_response.data:
-            print(f"Found {len(history_response.data)} previous interactions.")
-            chat_history_for_gemini = format_db_history_for_gemini(history_response.data)
-        else:
-            print("No previous chat history found for this agent.")
-
-    except Exception as e:
-        # If fetching history fails, we can still proceed without it.
-        # Log the error but don't block the user's interaction.
-        print(f"Warning: Could not fetch chat history. Proceeding without it. Error: {e}")
+    # 2. --- Construct Unified Memory Stream ---
+    chat_history_for_gemini = construct_memory_stream(request.user_id, request.agent_name, supabase)
 
     # 3. --- Get AI Response from Gemini Service ---
     ai_response_text = get_ai_response(

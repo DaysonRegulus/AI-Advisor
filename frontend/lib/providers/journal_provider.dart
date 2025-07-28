@@ -27,7 +27,7 @@ class JournalProvider with ChangeNotifier {
       final fetchedEntries = await _apiService.getJournalEntries();
       // To make the list view act like a chat (newest at the bottom),
       // we reverse the list here. The UI will use reverse: true on the ListView.
-      _entries = fetchedEntries.reversed.toList();
+      _entries = fetchedEntries;
 
       // Immediately fetch comments for all loaded entries ---
       // We don't want to wait for one to finish before starting the next,

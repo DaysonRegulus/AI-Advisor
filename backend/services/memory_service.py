@@ -1,5 +1,6 @@
 # services/memory_service.py
 
+from dateutil import parser
 from supabase import Client
 from datetime import datetime
 from typing import List, Dict, Any
@@ -47,8 +48,9 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
     if interactions_res.data:
         for item in interactions_res.data:
             # Add both user message and model response as a sequence
+            timestamp_str = item['created_at'].replace('+00:00', 'Z')
             unified_log.append({
-                "timestamp": datetime.fromisoformat(item['created_at']),
+                "timestamp": parser.isoparse(timestamp_str.replace('Z', '')),
                 "type": "interaction",
                 "data": {
                     "user": item['user_message'],
@@ -58,8 +60,9 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
 
     if journals_res.data:
         for item in journals_res.data:
+            timestamp_str = item['created_at'].replace('+00:00', 'Z')
             unified_log.append({
-                "timestamp": datetime.fromisoformat(item['created_at']),
+                "timestamp": parser.isoparse(timestamp_str.replace('Z', '')),
                 "type": "journal",
                 "data": {
                     "user": item['content']
@@ -70,8 +73,9 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
     if comments_res.data:
         for item in comments_res.data:
             # This represents the AI's "thought" process: seeing a journal and commenting on it.
+            timestamp_str = item['created_at'].replace('+00:00', 'Z')
             unified_log.append({
-                "timestamp": datetime.fromisoformat(item['created_at']),
+                "timestamp": parser.isoparse(timestamp_str.replace('Z', '')),
                 "type": "comment_memory",
                 "data": {
                     # The original journal entry is the "user" part

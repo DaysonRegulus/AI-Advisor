@@ -10,6 +10,7 @@ class JournalEntry {
   // New properties for the interactive UI
   List<AIComment> comments;
   bool areCommentsLoading;
+  bool areCommentsVisible;
   bool isExpanded;
 
   JournalEntry({
@@ -18,6 +19,7 @@ class JournalEntry {
     required this.createdAt,
     this.comments = const [],
     this.areCommentsLoading = false,
+    this.areCommentsVisible = true,
     this.isExpanded = false,
   });
 
@@ -26,6 +28,7 @@ class JournalEntry {
       id: json['id'],
       content: json['content'],
       createdAt: DateTime.parse(json['created_at']),
+      areCommentsVisible: true,
     );
   }
 }

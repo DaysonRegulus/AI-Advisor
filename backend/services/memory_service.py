@@ -30,12 +30,18 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
         journals_res = supabase.table("journal_entries").select("content, created_at") \
             .eq("user_id", user_id) \
             .execute()
+            
+        # 3. Fetch all Journal Comments made by this specific agent
+        comments_res = supabase.table("journal_comments").select("comment_text, created_at, entry:journal_entries!inner(content)") \
+            .eq("agent_name", agent_name) \
+            .eq("entry.user_id", user_id) \
+            .execute()
 
     except Exception as e:
         print(f"ERROR: Database query failed during memory construction: {e}")
         return [] # Return empty memory on DB error
 
-    # 3. Standardize and combine data
+    # 4. Standardize and combine data
     unified_log = []
 
     if interactions_res.data:
@@ -59,12 +65,27 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
                     "user": item['content']
                 }
             })
+            
+    # --- NEW: Process Comments ---
+    if comments_res.data:
+        for item in comments_res.data:
+            # This represents the AI's "thought" process: seeing a journal and commenting on it.
+            unified_log.append({
+                "timestamp": datetime.fromisoformat(item['created_at']),
+                "type": "comment_memory",
+                "data": {
+                    # The original journal entry is the "user" part
+                    "user": f"[The user wrote this journal entry, which you commented on]:\n{item['entry']['content']}",
+                    # The comment is the "model" part
+                    "model": item['comment_text']
+                }
+            })
 
-    # 4. Sort the combined log chronologically
+    # 5. Sort the combined log chronologically
     unified_log.sort(key=lambda x: x['timestamp'])
     print(f"Unified memory contains {len(unified_log)} items.")
 
-    # 5. Format for Gemini API
+    # 6. Format for Gemini API
     gemini_history = []
     for item in unified_log:
         if item['type'] == 'interaction':
@@ -76,5 +97,9 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
             gemini_history.append({'role': 'user', 'parts': [journal_prompt]})
             # We add a model part to acknowledge the entry, making the conversation flow more natural for the AI.
             gemini_history.append({'role': 'model', 'parts': ["Understood. I have taken note of this journal entry."]})
+        # --- NEW: Handle the comment memory type ---
+        elif item['type'] == 'comment_memory':
+            gemini_history.append({'role': 'user', 'parts': [item['data']['user']]})
+            gemini_history.append({'role': 'model', 'parts': [item['data']['model']]})
 
     return gemini_history

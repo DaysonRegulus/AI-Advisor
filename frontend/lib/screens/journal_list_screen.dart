@@ -40,6 +40,7 @@ class _JournalScreenState extends State<JournalScreen> {
             return const Center(child: Text("No journal entries yet. Add one!"));
           }
           return ListView.builder(
+            reverse: true, // Newest entries at the bottom
             itemCount: provider.entries.length,
             itemBuilder: (context, index) {
               final entry = provider.entries[index];
@@ -77,27 +78,42 @@ class JournalEntryCard extends StatelessWidget {
     final journalProvider = Provider.of<JournalProvider>(context, listen: false);
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              DateFormat('MMMM d, yyyy - h:mm a').format(entry.createdAt.toLocal()),
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
+            // --- Journal Entry Content (with Read More) ---
             InkWell(
               onTap: () => journalProvider.toggleEntryExpansion(entry.id),
-              child: AnimatedCrossFade(
-                duration: const Duration(milliseconds: 300),
-                crossFadeState: entry.isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                firstChild: Text(entry.content, maxLines: 3, overflow: TextOverflow.ellipsis),
-                secondChild: Text(entry.content),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    DateFormat('MMMM d, yyyy - h:mm a').format(entry.createdAt.toLocal()),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  // The 'Read More' functionality is implicitly handled by AnimatedCrossFade
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: entry.isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                    firstChild: Text(entry.content, maxLines: 3, overflow: TextOverflow.ellipsis),
+                    secondChild: Text(entry.content),
+                  ),
+                ],
               ),
             ),
-            const Divider(height: 24),
+            
+            // --- Divider and Comments Section ---
+            if (entry.comments.isNotEmpty || entry.areCommentsLoading)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: const Divider(height: 16),
+              ),
             _buildCommentSection(context, entry),
           ],
         ),
@@ -106,33 +122,81 @@ class JournalEntryCard extends StatelessWidget {
   }
 
   Widget _buildCommentSection(BuildContext context, JournalEntry entry) {
-    if (entry.areCommentsLoading) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)),
-          const SizedBox(width: 10),
-          AnimatedTextKit(
-            animatedTexts: [
-              WavyAnimatedText('Agents are thinking...'),
-            ],
-            isRepeatingAnimation: true,
-          ),
-        ],
-      );
-    }
+    final journalProvider = Provider.of<JournalProvider>(context, listen: false);
 
-    if (entry.comments.isEmpty) {
-      return Center(
-        child: TextButton(
-          onPressed: () => Provider.of<JournalProvider>(context, listen: false).fetchCommentsForEntry(entry.id),
-          child: const Text("Check for AI Insights"),
+    // --- 1. Loading State ---
+    if (entry.areCommentsLoading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 12),
+            // --- FIXED ANIMATION ---
+            Row(
+              children: [
+                const Text("Agents are thinking"),
+                AnimatedTextKit(
+                  animatedTexts: [
+                    TyperAnimatedText('...'),
+                  ],
+                  isRepeatingAnimation: true,
+                ),
+              ],
+            )
+          ],
         ),
       );
     }
 
+    // --- 2. No Comments State ---
+    // This state should now rarely be seen, as comments are loaded automatically.
+    // It acts as a fallback.
+    if (entry.comments.isEmpty) {
+      return const SizedBox.shrink(); // Render nothing if no comments and not loading
+    }
+
+    // --- 3. Comments are available ---
     return Column(
-      children: entry.comments.map((comment) => AICommentBubble(comment: comment)).toList(),
+      children: [
+        // --- Collapse/Expand Button ---
+        InkWell(
+          onTap: () => journalProvider.toggleCommentVisibility(entry.id),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  entry.areCommentsVisible ? "Collapse" : "Show ${entry.comments.length} Comments",
+                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+                ),
+                Icon(
+                  entry.areCommentsVisible ? Icons.expand_less : Icons.expand_more,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        // --- The Animated Comment List ---
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return SizeTransition(sizeFactor: animation, child: child);
+          },
+          child: entry.areCommentsVisible
+              ? Column(
+                  // Use a unique key to help the animation
+                  key: ValueKey<int>(entry.comments.length),
+                  children: entry.comments.map((comment) => AICommentBubble(comment: comment)).toList(),
+                )
+              // Render an empty container when comments are not visible
+              : const SizedBox.shrink(key: ValueKey<int>(0)),
+        ),
+      ],
     );
   }
 }

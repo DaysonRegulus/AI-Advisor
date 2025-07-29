@@ -1,3 +1,4 @@
+plans/
 backend/venv/
 backend/.venv
 *.pyc

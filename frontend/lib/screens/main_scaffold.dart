@@ -49,7 +49,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       // For now, Chats and Journal don't have refresh, but we could pass the function to them too.
       ChatsScreen(onRefresh: _refreshAllData), 
       HomeScreen(onRefresh: _refreshAllData), // <-- Pass the function here
-      JournalScreen(onRefresh: _refreshAllData),
+      JournalScreen(),
     ];
 
     // This is where we trigger the initial data fetch for the app!

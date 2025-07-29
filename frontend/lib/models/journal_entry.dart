@@ -1,11 +1,11 @@
 // lib/models/journal_entry.dart
 
+import 'journal_timeline_item.dart';
 import 'ai_comment.dart';
 
-class JournalEntry {
+class JournalEntry extends JournalTimelineItem {
   final String id;
   final String content;
-  final DateTime createdAt;
   
   // New properties for the interactive UI
   List<AIComment> comments;
@@ -16,12 +16,12 @@ class JournalEntry {
   JournalEntry({
     required this.id,
     required this.content,
-    required this.createdAt,
+    required DateTime createdAt,
     this.comments = const [],
     this.areCommentsLoading = false,
     this.areCommentsVisible = true,
     this.isExpanded = false,
-  });
+  }) : super(createdAt);
 
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
     return JournalEntry(

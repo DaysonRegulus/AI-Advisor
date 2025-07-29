@@ -28,6 +28,7 @@ class JournalEntryResponse(BaseModel):
 class AIComment(BaseModel):
     agent_name: str
     comment_text: str
+    created_at: str
 
 # --- Background Task for Generating Comments ---
 
@@ -144,8 +145,34 @@ async def get_all_journal_entries(user_id: str, supabase: Client = Depends(get_s
     try:
         res = supabase.table("journal_entries").select("*") \
             .eq("user_id", user_id) \
-            .order("created_at", desc=True) \
+            .order("created_at", desc=False) \
             .execute()
         return res.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/journal/all-comments/{user_id}", response_model=List[AIComment])
+async def get_all_journal_comments_for_user(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    """
+    Fetches all AI comments for a given user, formatted correctly.
+    """
+    try:
+        res = supabase.table("journal_comments").select(
+                "agent_name, comment_text, created_at, entry:journal_entries!inner(user_id)"
+            ) \
+            .eq("entry.user_id", user_id) \
+            .execute()
+        
+        # We must return data that matches the Pydantic model exactly.
+        # The 'entry' field is not in the AIComment model.
+        comments_without_join_data = [
+            {
+                "agent_name": comment["agent_name"],
+                "comment_text": comment["comment_text"],
+                "created_at": comment["created_at"],
+            }
+            for comment in res.data
+        ]
+        return comments_without_join_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

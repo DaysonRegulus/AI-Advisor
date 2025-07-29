@@ -204,4 +204,20 @@ class ApiService {
       return [];
     }
   }
+
+  // --- NEW: Get ALL AI Comments for a user ---
+  Future<List<AIComment>> getAllAIComments() async {
+    final url = Uri.parse('$_baseUrl/journal/all-comments/$_testUserId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => AIComment.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching all AI comments: $e');
+      throw Exception('Failed to fetch all AI comments');
+    }
+  }
 }

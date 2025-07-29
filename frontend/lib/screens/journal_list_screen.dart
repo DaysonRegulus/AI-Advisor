@@ -1,10 +1,13 @@
 // lib/screens/journal_list_screen.dart
+
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/journal_provider.dart';
 import '../models/journal_timeline_item.dart';
+import '../models/loading_indicator_item.dart';
 import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import 'add_journal_screen.dart';
@@ -60,6 +63,8 @@ class _JournalScreenState extends State<JournalScreen> {
                 return _UserJournalBubble(entry: item);
               } else if (item is AIComment) {
                 return _AiCommentBubble(comment: item);
+              } else if (item is LoadingIndicatorItem) {
+                return const _AiThinkingBubble();
               }
               return const SizedBox.shrink(); // Should not happen
             },
@@ -171,6 +176,52 @@ class _AiCommentBubble extends StatelessWidget {
             Text(DateFormat('MMM d, h:mm a').format(comment.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
             const SizedBox(height: 5),
             Text(comment.commentText, style: const TextStyle(fontSize: 16)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- WIDGET FOR THE "AGENTS ARE THINKING" BUBBLE ---
+class _AiThinkingBubble extends StatelessWidget {
+  const _AiThinkingBubble({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[200], // A neutral color
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+            topLeft: Radius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // The Row should only be as wide as its content
+          children: [
+            const Text(
+              "Agents are thinking",
+              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            ),
+            // This AnimatedTextKit now only controls the ellipsis
+            AnimatedTextKit(
+              animatedTexts: [
+                TyperAnimatedText(
+                  '...',
+                  textStyle: const TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                  speed: const Duration(milliseconds: 200),
+                ),
+              ],
+              isRepeatingAnimation: true,
+              repeatForever: true,
+            ),
           ],
         ),
       ),

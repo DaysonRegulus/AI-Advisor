@@ -27,25 +27,36 @@ class _AddJournalScreenState extends State<AddJournalScreen> {
       return;
     }
 
+    // Set the local saving state to show the spinner in the AppBar
     setState(() { _isSaving = true; });
 
-    // Call the provider to add the entry and trigger background tasks
-    await Provider.of<JournalProvider>(context, listen: false).addJournalEntry(_controller.text);
-    
-    // Also award XP via the UserProfileProvider
-    await Provider.of<UserProfileProvider>(context, listen: false).awardXpForEvent('journal_entry_added', 15);
+    // Get the providers, but don't listen to changes here.
+    final journalProvider = Provider.of<JournalProvider>(context, listen: false);
+    final userProfileProvider = Provider.of<UserProfileProvider>(context, listen: false);
 
-    setState(() { _isSaving = false; });
+    try {
+      // We call the provider methods but DO NOT use 'await'.
+      // This fires off the background tasks without blocking the UI.
+      journalProvider.addJournalEntry(_controller.text);
+      userProfileProvider.awardXpForEvent('journal_entry_added', 15);
 
-    if (mounted) { // Check if the widget is still in the tree
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Journal entry saved! Agents are now reviewing it.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      // Pass 'true' back to signal that an entry was added
-      Navigator.of(context).pop(true);
+      // Immediately navigate back and signal success.
+      if (mounted) {
+        // Pass 'true' back to the previous screen.
+        Navigator.of(context).pop(true);
+      }
+
+    } catch (e) {
+      // If the initial call fails, show an error.
+      setState(() { _isSaving = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: Could not start save process. $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

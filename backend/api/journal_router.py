@@ -134,7 +134,7 @@ async def get_journal_comments(entry_id: str, supabase: Client = Depends(get_sup
     Fetches all saved AI comments for a specific journal entry.
     """
     try:
-        res = supabase.table("journal_comments").select("agent_name, comment_text").eq("entry_id", entry_id).execute()
+        res = supabase.table("journal_comments").select("agent_name, comment_text, created_at").eq("entry_id", entry_id).execute()
         return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -58,13 +58,59 @@ class JournalProvider with ChangeNotifier {
     try {
       final newEntry = await _apiService.addJournalEntry(content);
       if (newEntry != null) {
-        // After successfully adding, refresh the entire timeline
-        // to get the new entry and its eventual comments.
-        await fetchTimeline();
+        newEntry.areCommentsLoading = true; // Start the "thinking" indicator
+
+        // Add the new entry to the end of our local list.
+        _timelineItems.add(newEntry);
+
+        // The JournalScreen will now rebuild and show the new entry with its loading indicator.
+        notifyListeners();
+
+        // The UI is already updated and responsive.
+        await _pollForComments(newEntry.id);
+      } else {
+        // Handle the case where the server failed to return the new entry
+        _error = "Failed to save journal entry on the server.";
+        notifyListeners();
       }
     } catch (e) {
       _error = "Failed to add journal entry: $e";
       notifyListeners();
     }
+  }
+  // --- NEW HELPER METHOD ---
+  void _updateEntryComments(String entryId, List<AIComment> comments) {
+    final entryIndex = _timelineItems.indexWhere(
+      (item) => item is JournalEntry && item.id == entryId
+    );
+
+    if (entryIndex != -1) {
+      final entry = _timelineItems[entryIndex] as JournalEntry;
+      entry.comments = comments;
+      entry.areCommentsLoading = false; // Turn off the indicator
+      notifyListeners();
+    }
+  }
+
+  // --- REVISED: _pollForComments ---
+  Future<void> _pollForComments(String entryId) async {
+    const int maxRetries = 10;
+    const Duration delay = Duration(seconds: 5);
+
+    for (int i = 0; i < maxRetries; i++) {
+      await Future.delayed(delay);
+      print("Polling for comments... Attempt ${i + 1}");
+      
+      final comments = await _apiService.getJournalComments(entryId);
+      if (comments.isNotEmpty) {
+        print("Comments found for entry $entryId!");
+        _updateEntryComments(entryId, comments);
+        return; // Exit polling successfully
+      }
+    }
+
+    // If polling times out, we still need to update the UI to stop the loading indicator.
+    print("Polling timed out for entry $entryId.");
+    _updateEntryComments(entryId, []); // Pass an empty list to stop the indicator
   }
 }

@@ -68,16 +68,23 @@ class _JournalScreenState extends State<JournalScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final bool entryAdded = await Navigator.push(
+          // We now 'await' the result of the push navigation.
+          final result = await Navigator.push<bool>(
             context,
             MaterialPageRoute(builder: (context) => const AddJournalScreen()),
           );
-          if (entryAdded == true) {
-            // The provider's addJournalEntry method now handles refreshing the timeline
+          // If the result is true, it means the save process was successfully started.
+          if (result == true && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Journal entry saved! Agents are reviewing it...'),
+                backgroundColor: Colors.green,
+              ),
+            );
           }
         },
         child: const Icon(Icons.add),
-        backgroundColor: Colors.green, // Your primary color
+        backgroundColor: Colors.green, // primary color
       ),
     );
   }

@@ -1,4 +1,5 @@
 // lib/screens/journal_list_screen.dart
+import 'dart:ui' as ui;
 
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
@@ -96,39 +97,90 @@ class _JournalScreenState extends State<JournalScreen> {
 }
 
 // --- WIDGET FOR THE USER'S JOURNAL ENTRY BUBBLE ---
-class _UserJournalBubble extends StatelessWidget {
+class _UserJournalBubble extends StatefulWidget {
   final JournalEntry entry;
   const _UserJournalBubble({Key? key, required this.entry}) : super(key: key);
 
   @override
+  __UserJournalBubbleState createState() => __UserJournalBubbleState();
+}
+
+class __UserJournalBubbleState extends State<_UserJournalBubble> {
+  bool _isExpanded = false;
+  bool _isExpandable = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.green[100], // A distinct color for the user
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(16),
-            bottomLeft: Radius.circular(16),
-            topRight: Radius.circular(16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "My Journal Entry",
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800]),
+    // We use a LayoutBuilder to determine if the text will overflow.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Create a TextPainter to measure the text.
+        final textPainter = TextPainter(
+          text: TextSpan(text: widget.entry.content, style: const TextStyle(fontSize: 16)),
+          maxLines: 3, // The number of lines before it's considered "overflowing"
+          textDirection: ui.TextDirection.ltr,
+        )..layout(maxWidth: constraints.maxWidth); // Layout with the available width
+
+        // Check if the text actually exceeds the max lines.
+        // We only want to show "Read More" if it's necessary.
+        if (textPainter.didExceedMaxLines && !_isExpandable) {
+          // If it overflows, we update the state to mark it as expandable.
+          // We use addPostFrameCallback to avoid causing errors during a build phase.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if(mounted) {
+              setState(() {
+                _isExpandable = true;
+              });
+            }
+          });
+        }
+        
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green[100], // A distinct color for the user
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
             ),
-            Text(DateFormat('MMM d, h:mm a').format(entry.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-            const SizedBox(height: 5),
-            Text(entry.content, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
+            child: InkWell(
+              onTap: _isExpandable ? () => setState(() => _isExpanded = !_isExpanded) : null,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "My Journal Entry",
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green[800]),
+                  ),
+                  Text(DateFormat('MMM d, h:mm a').format(widget.entry.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.entry.content,
+                    style: const TextStyle(fontSize: 16),
+                    maxLines: _isExpanded ? null : 3, // Show all lines if expanded
+                    overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                  ),
+                  // --- THE FIX: Conditionally show the "Read More" text ---
+                  if (_isExpandable && !_isExpanded)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(
+                        "Read more...",
+                        style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -138,6 +190,7 @@ class _AiCommentBubble extends StatelessWidget {
   final AIComment comment;
   const _AiCommentBubble({Key? key, required this.comment}) : super(key: key);
 
+  // The agent data map remains the same, it's correct.
   static const agentData = {
     'financial_advisor': {'icon': Icons.monetization_on, 'name': 'Financial Advisor'},
     'personal_trainer': {'icon': Icons.fitness_center, 'name': 'Personal Trainer'},
@@ -152,32 +205,51 @@ class _AiCommentBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = agentData[comment.agentName] ?? {'icon': Icons.android, 'name': 'AI Agent'};
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[200], // A neutral color for AIs
-          borderRadius: const BorderRadius.only(
-            topRight: Radius.circular(16),
-            bottomRight: Radius.circular(16),
-            topLeft: Radius.circular(16),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              data['name'] as String,
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800]),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      child: Row( // <-- The Row layout is key
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- THE MISSING ICON WIDGET ---
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.grey[300],
+            child: Icon(
+              data['icon'] as IconData,
+              size: 18,
+              color: Colors.grey[800],
             ),
-            Text(DateFormat('MMM d, h:mm a').format(comment.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-            const SizedBox(height: 5),
-            Text(comment.commentText, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+
+          // The comment bubble container
+          Expanded(
+            child: Container(
+              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                  topLeft: Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data['name'] as String,
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800]),
+                  ),
+                  Text(DateFormat('MMM d, h:mm a').format(comment.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  const SizedBox(height: 5),
+                  Text(comment.commentText, style: const TextStyle(fontSize: 16)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

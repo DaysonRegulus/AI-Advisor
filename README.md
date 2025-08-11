@@ -78,11 +78,19 @@ To get a local copy up and running, follow these simple steps.
       GEMINI_API_KEY="your_google_ai_studio_api_key"
       SUPABASE_URL="your_supabase_project_url"
       SUPABASE_KEY="your_supabase_service_role_key" 
+      DEBUG_MODE="False"
       ```
       *Note: Use the `service_role` key for the backend to bypass RLS policies.*
 5.  **Set up the Supabase Database:**
-    *   Navigate to the SQL Editor in your Supabase project.
-    *   Run the SQL scripts from the `/database_schema` directory in the repository to create tables and security policies. *(Coming soon)*.
+    To set up the Supabase PostgreSQL database for this project, follow these steps:
+
+    1.  Create a new project on [Supabase](https://app.supabase.com).
+    2.  Navigate to the **SQL Editor** in your Supabase project dashboard.
+    3.  Open the `backend/schema.sql` file from this repository.
+    4.  Copy the entire contents of the file.
+    5.  Paste the SQL script into the Supabase SQL Editor and click **"RUN"**.
+
+    This will create all necessary tables, indexes, and security policies required for the application to function correctly.
 6.  **Run the backend server:**
     ```sh
     uvicorn main:app --reload --host 0.0.0.0

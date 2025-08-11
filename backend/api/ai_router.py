@@ -1,6 +1,6 @@
 # api/ai_router.py
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from supabase import Client
 import datetime
@@ -8,17 +8,18 @@ import datetime
 # Our project imports
 from dependencies import get_supabase_client
 from services.gemini_service import get_ai_response
+from services.memory_service import construct_memory_stream, TOKEN_THRESHOLD_FOR_SUMMARIZATION, ROW_COUNT_THRESHOLD_FOR_SUMMARIZATION, get_active_window_log
+from services.background_tasks import update_token_count_task, trigger_summarization_task
 from core.personas import EXPERT_PERSONAS
-from services.memory_service import construct_memory_stream
 
-# Create an APIRouter instance. This is like a mini-FastAPI app.
+# Create an APIRouter instance
 router = APIRouter()
 
-# --- Pydantic Models for Data Validation ---
+# --- Pydantic Models ---
 class AIInteractionRequest(BaseModel):
     agent_name: str
     message: str
-    user_id: str  # In a real app, you'd get this from a JWT token. For now, we pass it manually.
+    user_id: str
 
 class AIInteractionResponse(BaseModel):
     response: str
@@ -40,19 +41,16 @@ def format_db_history_for_gemini(db_history: list) -> list:
 @router.post(
     "/ai/interact",
     response_model=AIInteractionResponse,
-    summary="Interact with an AI Agent",
-    description="Sends a message to a specific AI agent and gets a response, maintaining chat history."
+    summary="Interact with an AI Agent (Scalable Memory)",
+    description="Sends a message to an agent, uses the scalable memory system, and triggers background tasks for memory management."
 )
 def interact_with_ai(
     request: AIInteractionRequest,
+    background_tasks: BackgroundTasks, # <-- FastAPI will inject the background task manager
     supabase: Client = Depends(get_supabase_client)
 ):
     """
-    Handles the core logic for AI agent interaction.
-    1. Validates the agent name.
-    2. Fetches recent conversation history from Supabase for context.
-    3. Calls the Gemini service to get a new response.
-    4. Logs the new interaction to Supabase.
+    Handles the core logic for AI agent interaction using the new scalable system.
     """
     # 1. --- Validate Agent Name ---
     if request.agent_name not in EXPERT_PERSONAS:
@@ -64,19 +62,23 @@ def interact_with_ai(
     print(f"Request received for agent '{request.agent_name}' from user '{request.user_id}'")
     persona = EXPERT_PERSONAS[request.agent_name]
 
-    # 2. --- Construct Unified Memory Stream ---
+    # 2. --- Construct Memory Stream using the new Scalable Service ---
+    # This single function call now contains all the complex logic for summaries and active windows.
     chat_history_for_gemini = construct_memory_stream(request.user_id, request.agent_name, supabase)
 
     # 3. --- Get AI Response from Gemini Service ---
+    # We pass the user_id and agent_name for our new debug logger.
     ai_response_text = get_ai_response(
         persona_prompt=persona,
         user_message=request.message,
-        chat_history=chat_history_for_gemini
+        chat_history=chat_history_for_gemini,
+        user_id_for_debug=request.user_id,
+        agent_name_for_debug=request.agent_name
     )
 
-    # 4. --- Log the New Interaction to Supabase ---
+    # 4. --- Log the core interaction and manage background tasks ---
     try:
-        print("Logging new interaction to Supabase...")
+        # First, log the new interaction to the ai_interactions table. This must succeed.
         supabase.table("ai_interactions").insert({
             "user_id": request.user_id,
             "agent_name": request.agent_name,
@@ -84,14 +86,39 @@ def interact_with_ai(
             "ai_response": ai_response_text
         }).execute()
         print("Interaction logged successfully.")
-    except Exception as e:
-        # This is more critical. We should at least log it prominently.
-        # In a production system, you might add this to a retry queue.
-        print(f"CRITICAL WARNING: Failed to log AI interaction to Supabase for user {request.user_id}. Error: {e}")
-        # We don't raise an HTTPException because the user has already received their response.
-        # Failing silently on the log is better than returning an error to the user at this stage.
 
-    # 5. --- Return the Final Response ---
+        # Second, add the lightweight token counting task to the background.
+        background_tasks.add_task(
+            update_token_count_task,
+            user_id=request.user_id,
+            agent_name=request.agent_name,
+            new_interaction={"user_message": request.message, "ai_response": ai_response_text},
+            supabase=supabase
+        )
+        
+        # Third, check if we need to trigger the heavyweight summarization task.
+        # This is a fast check because it only reads a single integer from the DB.
+        mem_stats_res = supabase.table("memory_stats") \
+            .select("active_token_count") \
+            .eq("user_id", request.user_id) \
+            .eq("agent_name", request.agent_name) \
+            .limit(1).execute()
+            
+        if mem_stats_res.data and mem_stats_res.data[0].get('active_token_count', 0) > TOKEN_THRESHOLD_FOR_SUMMARIZATION:
+            print(f"TOKEN THRESHOLD EXCEEDED for {request.agent_name}. Triggering summarization task.")
+            background_tasks.add_task(
+                trigger_summarization_task,
+                user_id=request.user_id,
+                agent_name=request.agent_name,
+                supabase=supabase
+            )
+
+    except Exception as e:
+        print(f"CRITICAL WARNING: Failed to log interaction or trigger background tasks. Error: {e}")
+        # We don't raise an error here because the user already has their response.
+        # This is a background system failure that should be logged for maintenance.
+
+    # 5. --- Return the Final Response to the user ---
     return AIInteractionResponse(
         response=ai_response_text,
         agent_name=request.agent_name,

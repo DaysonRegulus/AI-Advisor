@@ -3,6 +3,7 @@ backend/venv/
 backend/.venv
 *.pyc
 __pycache__/
+debug_logs/
 
 frontend/.dart_tool/
 frontend/.idea/

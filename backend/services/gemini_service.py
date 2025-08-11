@@ -3,6 +3,11 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+from datetime import datetime
+
+DEBUG_LOG_DIR = "debug_logs"
+if not os.path.exists(DEBUG_LOG_DIR):
+    os.makedirs(DEBUG_LOG_DIR)
 
 # --- Configuration ---
 # Load environment variables from the .env file in the project root
@@ -37,7 +42,7 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 print("Gemini model 'gemini-2.5-flash' selected.")
 
 # --- Core Function ---
-def get_ai_response(persona_prompt: str, user_message: str, chat_history: list = None) -> str:
+def get_ai_response(persona_prompt: str, user_message: str, chat_history: list = None, user_id_for_debug: str = None, agent_name_for_debug: str = None) -> str:
     """
     Generates a response from a Gemini agent with a specific persona and chat history.
 
@@ -58,6 +63,27 @@ def get_ai_response(persona_prompt: str, user_message: str, chat_history: list =
     print(f"\n--- Calling Gemini API with Persona ---")
     print(f"Persona: {persona_prompt[:80]}...") # Print first 80 chars of persona
     print(f"User Message: {user_message}")
+    
+    if os.getenv("DEBUG_MODE") == "True" and user_id_for_debug and agent_name_for_debug:
+        try:
+            # Create a unique filename for each request
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{DEBUG_LOG_DIR}/prompt_{timestamp}_{user_id_for_debug}_{agent_name_for_debug}.txt"
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("--- PERSONA PROMPT ---\n")
+                f.write(persona_prompt + "\n\n")
+                
+                f.write("--- CHAT HISTORY ---\n")
+                for turn in (chat_history or []):
+                    f.write(f"[{turn['role'].upper()}]\n{turn['parts'][0]}\n\n")
+                
+                f.write("--- LATEST USER MESSAGE ---\n")
+                f.write(user_message + "\n")
+            
+            print(f"DEBUG: Saved full prompt to {filename}")
+        except Exception as e:
+            print(f"DEBUGGING ERROR: Could not write debug log file. Error: {e}")
 
     try:
         # The chat history format is specific. The persona acts as the first "system" instruction.

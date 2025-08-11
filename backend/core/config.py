@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     It automatically reads environment variables from a .env file.
     """
     # Tell pydantic to look for a .env file
-    model_config = SettingsConfigDict(env_file="./.env", env_file_encoding='utf-8', extra='ignore')
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8', extra='ignore')
 
     # --- Gemini API ---
     GEMINI_API_KEY: str

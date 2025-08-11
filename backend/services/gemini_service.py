@@ -2,7 +2,7 @@
 
 import os
 import google.generativeai as genai
-from dotenv import load_dotenv
+from core.config import settings
 from datetime import datetime
 
 DEBUG_LOG_DIR = "debug_logs"
@@ -11,25 +11,17 @@ if not os.path.exists(DEBUG_LOG_DIR):
 
 # --- Configuration ---
 # Load environment variables from the .env file in the project root
-print("Loading environment variables...")
-load_dotenv()
-print("Environment variables loaded.")
 
-# Fetch the API key from the environment variables
-API_KEY = os.getenv("GEMINI_API_KEY")
-
-# --- Error Handling for Configuration ---
-if not API_KEY:
-    # This is a critical error. The application cannot run without the API key.
-    raise ValueError("FATAL ERROR: GEMINI_API_KEY not found in environment variables. Please check your .env file.")
 
 # Configure the Google AI client library with the API key
-try:
-    genai.configure(api_key=API_KEY)
-    print("Gemini API configured successfully.")
-except Exception as e:
-    # This could happen if the key is invalid or there's a network issue during setup.
-    raise RuntimeError(f"Failed to configure Gemini API: {e}")
+if not settings.GEMINI_API_KEY:
+    print("WARNING: GEMINI_API_KEY not found. AI services will be disabled.")
+else:
+    try:
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        print("Gemini API configured successfully.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to configure Gemini API: {e}")
 
 
 # --- Model Selection ---
@@ -60,6 +52,10 @@ def get_ai_response(persona_prompt: str, user_message: str, chat_history: list =
     Raises:
         Exception: Propagates exceptions from the API call for upstream handling.
     """
+    if not settings.GEMINI_API_KEY:
+        print("ERROR: Gemini API key not configured. Returning error message.")
+        return "Error: The AI service is not configured on the server. Please contact the administrator."
+    
     print(f"\n--- Calling Gemini API with Persona ---")
     print(f"Persona: {persona_prompt[:80]}...") # Print first 80 chars of persona
     print(f"User Message: {user_message}")

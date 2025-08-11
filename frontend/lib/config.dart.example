@@ -1,0 +1,17 @@
+// lib/config.dart.example
+//
+// HOW TO USE:
+// 1. Copy this file.
+// 2. Rename the copy to 'config.dart'.
+// 3. Fill in your own values below.
+//
+// The 'config.dart' file is ignored by Git to keep your secrets safe.
+
+class AppConfig {
+  // For the Android Emulator, this should be 'http://10.0.2.2:8000'
+  // For a physical device on the same Wi-Fi, find your computer's local IP address.
+  static const String baseUrl = 'http://10.0.2.2:8000';
+
+  // Paste the user ID (UID) of your test user from the Supabase Auth dashboard.
+  static const String testUserId = 'paste-your-supabase-test-user-id-here';
+}

@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config.dart';
 import '../models/user_profile.dart';
 import '../models/daily_summary.dart';
 import '../models/journal_entry.dart';
@@ -10,11 +11,11 @@ import '../models/ai_comment.dart';
 class ApiService {
   // IMPORTANT: Use this IP for the Android Emulator to connect to your local machine.
   // For iOS Simulator, you would use 'http://localhost:8000'.
-  static const String _baseUrl = 'http://10.0.2.2:8000/api';
+  static const String _baseUrl = '${AppConfig.baseUrl}/api';
 
   // For testing, we need a hardcoded user ID.
   // Later, this will come from a login/auth process.
-  static const String _testUserId = "cea64e5e-ff2d-4096-970f-2d23d3429eb5"; // <--- PASTE YOUR TEST USER ID
+  static const String _testUserId = AppConfig.testUserId;
 
   // --- AI Interaction Method ---
   Future<String> interactWithAi(String agentName, String message) async {

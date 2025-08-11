@@ -9,4 +9,5 @@ frontend/.dart_tool/
 frontend/.idea/
 frontend/build/
 frontend/.packages
+frontend/lib/config.dart
 .env

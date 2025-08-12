@@ -1,12 +1,15 @@
 // lib/providers/journal_provider.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../api/api_exception.dart';
 import '../models/journal_timeline_item.dart';
 import '../models/loading_indicator_item.dart';
 import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import '../api/api_service.dart';
+import '../config.dart';
 
 class JournalProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -14,10 +17,99 @@ class JournalProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  WebSocketChannel? _channel;
+  bool _isConnecting = false;
+
   // Getters
   List<JournalTimelineItem> get timelineItems => _timelineItems;
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  void connect() {
+    // Prevent multiple connection attempts
+    if (_channel != null || _isConnecting) {
+      print("WebSocket connection attempt ignored: already connected or connecting.");
+      return;
+    }
+
+    _isConnecting = true;
+    print("WebSocket: Attempting to connect...");
+
+    try {
+      // Construct the WebSocket URL. Note the 'ws' scheme instead of 'http'.
+      final wsUrl = Uri.parse(AppConfig.baseUrl.replaceFirst('http', 'ws') + '/ws/comments/${AppConfig.testUserId}');
+      
+      _channel = WebSocketChannel.connect(wsUrl);
+      _isConnecting = false;
+      print("WebSocket: Connection established.");
+
+      // Start listening for incoming messages immediately
+      _channel!.stream.listen(
+        (message) {
+          // This is the core real-time logic
+          _handleIncomingComment(message);
+        },
+        onDone: () {
+          // This is called when the connection is closed by the server or network loss.
+          print("WebSocket: Connection closed.");
+          _channel = null;
+        },
+        onError: (error) {
+          // Handle any errors from the stream
+          print("WebSocket Error: $error");
+          _error = "Real-time connection error: $error";
+          _channel = null;
+          notifyListeners();
+        },
+      );
+    } catch (e) {
+      _isConnecting = false;
+      _error = "Failed to establish real-time connection.";
+      print("WebSocket: Connection failed: $e");
+      notifyListeners();
+    }
+  }
+
+  void disconnect() {
+    if (_channel != null) {
+      print("WebSocket: Disconnecting...");
+      _channel!.sink.close();
+      _channel = null;
+    }
+  }
+
+  // --- Handle Incoming WebSocket Messages ---
+
+  void _handleIncomingComment(String message) {
+    print("WebSocket: Received message: $message");
+    try {
+      final data = jsonDecode(message);
+      final newComment = AIComment.fromJsonWithEntryId(data);
+
+      // 1. Check if the loading indicator exists *before* trying to remove it.
+      final int loaderIndex = _timelineItems.indexWhere(
+          (item) => item is LoadingIndicatorItem && item.entryId == newComment.entryId
+      );
+
+      // 2. If it was found (index is not -1), then remove it.
+      if (loaderIndex != -1) {
+        _timelineItems.removeAt(loaderIndex);
+        print("Removed loading indicator for entry ${newComment.entryId}");
+      }
+      
+      // 3. Add the actual new comment to the list
+      _timelineItems.add(newComment);
+
+      // 4. Re-sort the entire list to place the new comment correctly
+      _timelineItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+      // 5. Notify the UI to rebuild and show the new comment
+      notifyListeners();
+
+    } catch (e) {
+      print("Error parsing incoming WebSocket message: $e");
+    }
+  }
 
   // This will now be the primary method for fetching and building the journal view.
   Future<void> fetchTimeline() async {
@@ -26,12 +118,11 @@ class JournalProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Fetch both data sources concurrently
-      final futureEntries = _apiService.getJournalEntries();
-      final futureComments = _apiService.getAllAIComments();
-
-      // Wait for both network calls to complete
-      final results = await Future.wait([futureEntries, futureComments]);
+      // The initial fetch logic remains the same
+      final results = await Future.wait([
+        _apiService.getJournalEntries(),
+        _apiService.getAllAIComments(),
+      ]);
 
       final List<JournalEntry> entries = results[0] as List<JournalEntry>;
       final List<AIComment> comments = results[1] as List<AIComment>;
@@ -46,8 +137,10 @@ class JournalProvider with ChangeNotifier {
 
       _timelineItems = combinedItems;
 
+    } on ApiException catch (e) {
+      _error = e.message;
     } catch (e) {
-      _error = e.toString();
+      _error = "An unexpected error occurred: $e";
     }
     
     _isLoading = false;
@@ -73,20 +166,13 @@ class JournalProvider with ChangeNotifier {
           createdAt: newEntryFromServer.createdAt.add(const Duration(milliseconds: 1)),
         ));
         
-        // 3. Notify the UI immediately.
+        // Re-sort to place the new entry and its loader correctly at the end
+        _timelineItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
         notifyListeners();
-        
-        // 4. Start the polling process in the background.
-        await _pollForComments(newEntryFromServer.id);
       } 
     } on ApiException catch (e) {
-      // Set an error state that the UI can react to
       _error = "Failed to add entry: $e";
-      notifyListeners();
-      // Re-throw the exception so the UI layer (e.g., the screen) can also know about the failure if needed.
-      rethrow;
-    } catch (e) {
-      _error = "An error occurred while adding the journal entry: $e";
       notifyListeners();
       rethrow;
     }
@@ -105,39 +191,9 @@ class JournalProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  // --- REVISED: _pollForComments ---
-  Future<void> _pollForComments(String entryId) async {
-    const int maxRetries = 10;
-    const Duration delay = Duration(seconds: 5);
-
-    for (int i = 0; i < maxRetries; i++) {
-      await Future.delayed(delay);
-      print("Polling for comments... Attempt ${i + 1} for entry $entryId");
-      
-      final comments = await _apiService.getJournalComments(entryId);
-      if (comments.isNotEmpty) {
-        print("Comments found for entry $entryId!");
-        
-        // --- NEW LOGIC ---
-        // 1. Remove the temporary loading indicator.
-        _timelineItems.removeWhere((item) => item is LoadingIndicatorItem && item.entryId == entryId);
-
-        // 2. Add the actual comments to the list.
-        _timelineItems.addAll(comments);
-
-        // 3. Re-sort the entire list to place comments correctly.
-        _timelineItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
-        // 4. Notify the UI of the final state.
-        notifyListeners();
-        return; // Exit polling
-      }
-    }
-
-    // If polling times out, just remove the loading indicator.
-    print("Polling timed out for entry $entryId.");
-    _timelineItems.removeWhere((item) => item is LoadingIndicatorItem && item.entryId == entryId);
-    notifyListeners();
+  @override
+  void dispose() {
+    disconnect();
+    super.dispose();
   }
 }

@@ -1,9 +1,11 @@
 # api/journal_router.py
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from core.connection_manager import manager as ws_manager 
 from pydantic import BaseModel
 from supabase import Client
 import asyncio
+import json
 from typing import List
 
 # Our project imports
@@ -72,13 +74,28 @@ async def generate_and_save_comments(entry_id: str, entry_content: str, user_id:
             })
     
     # Save valid comments to a new database table
-    if valid_comments:
+    for comment in valid_comments:
         try:
-            # We need a new table: 'journal_comments'
-            supabase.table("journal_comments").insert(valid_comments).execute()
-            print(f"BACKGROUND TASK: Successfully saved {len(valid_comments)} comments for entry {entry_id}.")
+            # 1. Save the comment to the database
+            db_response = supabase.table("journal_comments").insert(comment).execute()
+        
+            # 2. If saving was successful, push it to the client
+            if db_response.data:
+                print(f"Successfully saved comment from {comment['agent_name']} to DB.")
+            
+                # The message must be a JSON string.
+                # We also need to add the entry_id so the client knows which journal this comment belongs to.
+                payload = {
+                    "entry_id": entry_id,
+                    "agent_name": comment['agent_name'],
+                    "comment_text": comment['comment_text']
+                }
+                await ws_manager.send_personal_message(payload, user_id)
+        
         except Exception as e:
-            print(f"BACKGROUND TASK ERROR: Could not save comments to database. Error: {e}")
+            print(f"BACKGROUND TASK ERROR: Could not process/send comment from {comment['agent_name']}. Error: {e}")
+
+    print(f"BACKGROUND TASK: Finished comment generation for entry {entry_id}.")
 
 async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, supabase: Client) -> str:
     """Helper coroutine to get a comment from one agent."""

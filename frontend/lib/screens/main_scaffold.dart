@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/daily_summary_provider.dart';
+import '../providers/journal_provider.dart';
 import 'home_screen.dart';
 import 'chats_screen.dart';
 import 'journal_list_screen.dart';
@@ -21,6 +22,25 @@ class _MainScaffoldState extends State<MainScaffold> {
   late final List<Widget> _widgetOptions;
 
   void _onItemTapped(int index) {
+    // Do nothing if the same tab is tapped again. This prevents unnecessary work.
+    if (_selectedIndex == index) return;
+
+    // --- NEW: WEBSOCKET LIFECYCLE LOGIC ---
+    final journalProvider = Provider.of<JournalProvider>(context, listen: false);
+
+    // Check if we are navigating AWAY FROM the Journal tab (index 2)
+    if (_selectedIndex == 2) {
+      print("Navigating away from Journal tab. Disconnecting WebSocket.");
+      journalProvider.disconnect();
+    }
+
+    // Check if we are navigating TO the Journal tab (index 2)
+    if (index == 2) {
+      print("Navigating to Journal tab. Connecting WebSocket.");
+      journalProvider.connect();
+    }
+    // --- END OF NEW LOGIC ---
+
     setState(() {
       _selectedIndex = index;
     });
@@ -34,10 +54,19 @@ class _MainScaffoldState extends State<MainScaffold> {
     await Future.wait([
       context.read<UserProfileProvider>().fetchUserProfile(),
       context.read<DailySummaryProvider>().fetchLatestSummary(),
+      context.read<JournalProvider>().fetchTimeline(), // Fetch the journal entries and comments
       // When we add a ChatProvider or JournalProvider, we will add their fetch methods here too.
       // e.g., context.read<ChatProvider>().fetchRecentChats(),
     ]);
     print("--- Global Refresh Complete ---");
+  }
+
+  @override
+  void dispose() {
+    // This is a safety net to ensure we disconnect if the app is closed
+    // or the user navigates away from the main scaffold (e.g. logs out).
+    Provider.of<JournalProvider>(context, listen: false).disconnect();
+    super.dispose();
   }
 
   @override

@@ -22,15 +22,6 @@ class JournalScreen extends StatefulWidget {
 
 class _JournalScreenState extends State<JournalScreen> {
   @override
-  void initState() {
-    super.initState();
-    // Fetch the timeline when the screen is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<JournalProvider>(context, listen: false).fetchTimeline();
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(

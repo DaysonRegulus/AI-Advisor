@@ -83,7 +83,6 @@ def award_xp(
             "level": current_level,
             "xp_points": new_xp,
             "xp_to_next_level": xp_for_next,
-            "updated_at": "now()"
         }).eq("id", profile['id']).execute()
         
         if not update_response.data:

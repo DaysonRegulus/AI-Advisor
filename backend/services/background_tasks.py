@@ -64,7 +64,6 @@ def update_token_count_task(user_id: str, agent_name: str, new_interaction: dict
             "user_id": user_id,
             "agent_name": agent_name,
             "active_token_count": new_total_tokens,
-            "last_updated": "now()"
         }).execute()
 
         print(f"BACKGROUND TASK: Successfully updated token count for agent '{agent_name}' to {new_total_tokens}.")

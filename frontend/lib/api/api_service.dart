@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'api_exception.dart';
 import '../config.dart';
 import '../models/user_profile.dart';
 import '../models/daily_summary.dart';
@@ -38,12 +39,13 @@ class ApiService {
         print('API Response: ${data['response']}');
         return data['response'];
       } else {
-        print('API Error: ${response.statusCode} ${response.body}');
-        return "Error: Could not connect to the AI agent. ${response.body}";
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'The AI agent is currently unavailable.';
+        throw ApiException(errorMessage);
       }
     } catch (e) {
-      print('Network Error: $e');
-      return "Network Error: Could not reach the server. Is it running?";
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the AI service. Please check your network.');
     }
   }
 
@@ -58,12 +60,15 @@ class ApiService {
         print('User profile fetched successfully.');
         return UserProfile.fromJson(data);
       } else {
-        print('API Error fetching profile: ${response.statusCode} ${response.body}');
-        return null;
+        // Try to parse a structured error message from the backend
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['error'] ?? 'Unknown API error';
+        print('API Error fetching profile: ${response.statusCode} $errorMessage');
+        throw ApiException('Error: $errorMessage');
       }
-    } catch (e) {
-      print('Network error fetching profile: $e');
-      return null;
+      } catch (e) {
+        print('Network error fetching profile: $e');
+        throw ApiException('Could not connect to the server. Please check your network connection.');
     }
   }
 
@@ -111,12 +116,13 @@ class ApiService {
         print('Summary generation successful.');
       } else {
         // We throw an error so the provider can catch it.
-        print('API Error generating summary: ${response.statusCode} ${response.body}');
-        throw 'Failed to generate summary: ${response.body}';
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'The AI agent is currently unavailable.';
+        throw ApiException(errorMessage);
       }
     } catch(e) {
-      print('Network error generating summary: $e');
-      throw 'Network error. Could not reach server.';
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the AI service. Please check your network.');
     }
   }
 
@@ -138,12 +144,13 @@ class ApiService {
         return null;
       }
        else {
-        print('API Error fetching summary: ${response.statusCode} ${response.body}');
-        return null;
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'The AI agent is currently unavailable.';
+        throw ApiException(errorMessage);
       }
     } catch (e) {
-      print('Network error fetching summary: $e');
-      return null;
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the AI service. Please check your network.');
     }
   }
 
@@ -155,11 +162,14 @@ class ApiService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => JournalEntry.fromJson(json)).toList();
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'Failed to load journal entries.';
+        throw ApiException(errorMessage);
       }
-      return [];
     } catch (e) {
-      print('Error fetching journal entries: $e');
-      return [];
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the server to get journal entries.');
     }
   }
 
@@ -181,12 +191,13 @@ class ApiService {
         print('Journal entry added successfully.');
         return JournalEntry.fromJson(jsonDecode(response.body));
       } else {
-        print('API Error adding journal entry: ${response.statusCode} ${response.body}');
-        return null;
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'Failed to save journal entry.';
+        throw ApiException(errorMessage);
       }
     } catch (e) {
-      print('Network error adding journal entry: $e');
-      return null;
+      if (e is ApiException) rethrow; // Don't wrap our own exceptions
+      throw ApiException('Could not connect to the server to save entry.');
     }
   }
 
@@ -198,11 +209,14 @@ class ApiService {
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => AIComment.fromJson(json)).toList();
+      } else {
+        final errorData = jsonDecode(response.body);
+        final errorMessage = errorData['detail'] ?? 'Failed to load journal comments.';
+        throw ApiException(errorMessage);
       }
-      return [];
     } catch (e) {
-      print('Error fetching comments: $e');
-      return [];
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the server to get journal comments.');
     }
   }
 

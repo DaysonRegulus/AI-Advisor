@@ -135,8 +135,20 @@ def get_user_profile(user_id: str, supabase: Client = Depends(get_supabase_clien
 
         return response_data
     except Exception as e:
-        print(f"Error fetching profile for user {user_id}: {e}")
+        # This is a general catch-all, but the .single() error is the most common.
+        # Postgrest errors often don't have a specific Python exception type from the client library,
+        # so checking the string content can be a necessary evil.
+        error_message = str(e)
+        print(f"Error fetching profile for user {user_id}: {error_message}")
+
+        if "JSON object requested, multiple (or no) rows returned" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={"error": f"User profile for user_id '{user_id}' not found."}
+            )
+        
+        # For any other unexpected errors, return a 500
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User profile for user {user_id} not found."
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "An unexpected server error occurred."}
         )

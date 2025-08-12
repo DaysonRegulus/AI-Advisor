@@ -45,6 +45,18 @@ class _JournalScreenState extends State<JournalScreen> {
       ),
       body: Consumer<JournalProvider>(
         builder: (context, provider, child) {
+          if (provider.error != null && provider.timelineItems.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  "Could not load journal:\n${provider.error}",
+                  style: TextStyle(color: Colors.red.shade700),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
           if (provider.isLoading && provider.timelineItems.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }

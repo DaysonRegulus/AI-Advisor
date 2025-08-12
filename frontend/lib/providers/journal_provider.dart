@@ -1,6 +1,7 @@
 // lib/providers/journal_provider.dart
 
 import 'package:flutter/material.dart';
+import '../api/api_exception.dart';
 import '../models/journal_timeline_item.dart';
 import '../models/loading_indicator_item.dart';
 import '../models/journal_entry.dart';
@@ -77,13 +78,17 @@ class JournalProvider with ChangeNotifier {
         
         // 4. Start the polling process in the background.
         await _pollForComments(newEntryFromServer.id);
-      } else {
-        _error = "Failed to save journal entry on the server.";
-        notifyListeners();
-      }
+      } 
+    } on ApiException catch (e) {
+      // Set an error state that the UI can react to
+      _error = "Failed to add entry: $e";
+      notifyListeners();
+      // Re-throw the exception so the UI layer (e.g., the screen) can also know about the failure if needed.
+      rethrow;
     } catch (e) {
       _error = "An error occurred while adding the journal entry: $e";
       notifyListeners();
+      rethrow;
     }
   }
 

@@ -17,6 +17,18 @@ class DailySummaryCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Consumer<DailySummaryProvider>(
           builder: (context, summaryProvider, child) {
+            if (summaryProvider.error != null) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Could not load summary:\n${summaryProvider.error}",
+                    style: TextStyle(color: Colors.red.shade700),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
             if (summaryProvider.isLoading) {
               return const Center(child: CircularProgressIndicator());
             }

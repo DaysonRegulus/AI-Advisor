@@ -52,24 +52,42 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
         # 4. Format the active log for Gemini
         for item in active_log:
             if item['type'] == 'interaction':
-                gemini_history.append({'role': 'user', 'parts': [item['data']['user']]})
-                gemini_history.append({'role': 'model', 'parts': [item['data']['model']]})
+                ts = item['timestamp'].strftime('%Y-%m-%d %H:%M')
+                gemini_history.append({'role': 'user', 'parts': [f"[User message at {ts}]:\n{item['data']['user']}"]})
+                gemini_history.append({'role': 'model', 'parts': [f"[Agent reply at {ts}]:\n{item['data']['model']}"]})
             elif item['type'] == 'journal':
                 journal_prompt = f"[User's personal journal entry, written at {item['timestamp'].strftime('%Y-%m-%d %H:%M')}]:\n{item['data']['user']}"
                 gemini_history.append({'role': 'user', 'parts': [journal_prompt]})
                 gemini_history.append({'role': 'model', 'parts': ["Understood. I have taken note of this journal entry."]})
             elif item['type'] == 'comment_memory':
-                gemini_history.append({'role': 'user', 'parts': [item['data']['user']]})
-                gemini_history.append({'role': 'model', 'parts': [item['data']['model']]})
+                ts = item['timestamp'].strftime('%Y-%m-%d %H:%M')
+                gemini_history.append({'role': 'user', 'parts': [f"[Related journal context at {ts}]:\n{item['data']['user']}"]})
+                gemini_history.append({'role': 'model', 'parts': [f"[AI comment at {ts}]:\n{item['data']['model']}"]})
         
         # --- Integrated Bug Fix: Add Date Context for Overseer ---
         if agent_name == "master_overseer":
+            print("Overseer detected: Fetching its own past daily summaries...")
             today_date = datetime.now().strftime("%Y-%m-%d")
-            date_prompt = f"[CONTEXT: Today's date is {today_date}. Analyze all logs in relation to this date.]"
+            date_prompt = f"[CONTEXT: Today's date is {today_date}. Only include events that occurred today. Do not attribute previous days' logs to today.]"
+            thirty_days_ago_str = (datetime.now() - timedelta(days=30)).isoformat()
+            past_summaries_res = supabase.table("daily_summaries") \
+                .select("summary_text, date") \
+                .eq("user_id", user_id) \
+                .gte("created_at", thirty_days_ago_str) \
+                .order("date", desc=True) \
+                .execute()
             # Insert it right after the persona, at the start of the conversation
             gemini_history.insert(0, {'role': 'user', 'parts': [date_prompt]})
             gemini_history.insert(1, {'role': 'model', 'parts': ["Acknowledged. I will analyze the logs with today's date in mind."]})
             print("Added today's date context for Master Overseer.")
+            
+            if past_summaries_res.data:
+                past_summaries_text = "\n\n".join([f"[Your summary from {s['date']}]:\n{s['summary_text']}" for s in past_summaries_res.data])
+                summary_context_prompt = f"[CONTEXT: Here are your own previous daily summaries from the last 30 days for continuity.]\n{past_summaries_text}"
+                # Insert this context right after the date context
+                gemini_history.insert(2, {'role': 'user', 'parts': [summary_context_prompt]})
+                gemini_history.insert(3, {'role': 'model', 'parts': ["Understood. I will use my previous summaries for context."]})
+                print("Added past daily summaries to Overseer memory.")
 
         print(f"Constructed final memory stream with {len(gemini_history)} turns.")
         return gemini_history

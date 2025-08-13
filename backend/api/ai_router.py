@@ -95,23 +95,6 @@ def interact_with_ai(
             new_interaction={"user_message": request.message, "ai_response": ai_response_text},
             supabase=supabase
         )
-        
-        # Third, check if we need to trigger the heavyweight summarization task.
-        # This is a fast check because it only reads a single integer from the DB.
-        mem_stats_res = supabase.table("memory_stats") \
-            .select("active_token_count") \
-            .eq("user_id", request.user_id) \
-            .eq("agent_name", request.agent_name) \
-            .limit(1).execute()
-            
-        if mem_stats_res.data and mem_stats_res.data[0].get('active_token_count', 0) > TOKEN_THRESHOLD_FOR_SUMMARIZATION:
-            print(f"TOKEN THRESHOLD EXCEEDED for {request.agent_name}. Triggering summarization task.")
-            background_tasks.add_task(
-                trigger_summarization_task,
-                user_id=request.user_id,
-                agent_name=request.agent_name,
-                supabase=supabase
-            )
 
     except Exception as e:
         print(f"CRITICAL WARNING: Failed to log interaction or trigger background tasks. Error: {e}")

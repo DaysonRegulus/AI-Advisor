@@ -1,6 +1,7 @@
 # services/gemini_service.py
 
 import os
+import hashlib
 import google.generativeai as genai
 from core.config import settings
 from datetime import datetime
@@ -64,7 +65,8 @@ def get_ai_response(persona_prompt: str, user_message: str, chat_history: list =
         try:
             # Create a unique filename for each request
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{DEBUG_LOG_DIR}/prompt_{timestamp}_{user_id_for_debug}_{agent_name_for_debug}.txt"
+            sanitized_user_id = hashlib.sha256(user_id_for_debug.encode()).hexdigest()[:12]
+            filename = f"{DEBUG_LOG_DIR}/prompt_{timestamp}_{sanitized_user_id}_{agent_name_for_debug}.txt"
             
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write("--- PERSONA PROMPT ---\n")

@@ -67,6 +67,13 @@ def update_token_count_task(user_id: str, agent_name: str, new_interaction: dict
         }).execute()
 
         print(f"BACKGROUND TASK: Successfully updated token count for agent '{agent_name}' to {new_total_tokens}.")
+        
+        # Now, check if this new total exceeds our threshold.
+        if new_total_tokens > TOKEN_THRESHOLD_FOR_SUMMARIZATION:
+            print(f"TOKEN THRESHOLD EXCEEDED ({new_total_tokens} > {TOKEN_THRESHOLD_FOR_SUMMARIZATION}). Triggering summarization task for {agent_name}.")
+            # Note: We are calling a sync function from a sync function, so no 'await' is needed.
+            # If this were an async task, we would add it to the background queue.
+            trigger_summarization_task(user_id, agent_name, supabase)
 
     except Exception as e:
         # This is a non-critical error. We log it but don't crash the app.

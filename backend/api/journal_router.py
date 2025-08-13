@@ -31,6 +31,7 @@ class AIComment(BaseModel):
     agent_name: str
     comment_text: str
     created_at: str
+    entry_id: str
 
 # --- Background Task for Generating Comments ---
 
@@ -98,15 +99,25 @@ async def generate_and_save_comments(entry_id: str, entry_content: str, user_id:
     print(f"BACKGROUND TASK: Finished comment generation for entry {entry_id}.")
 
 async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, supabase: Client) -> str:
-    """Helper coroutine to get a comment from one agent."""
-    persona = EXPERT_PERSONAS[agent_name]
-    memory = construct_memory_stream(user_id, agent_name, supabase)
-    response = get_ai_response(
-        persona_prompt=persona,
-        user_message=prompt,
-        chat_history=memory
-    )
-    return response
+    """Helper coroutine that runs blocking AI calls in a separate thread."""
+    def blocking_ai_call():
+        # This inner function contains all the synchronous code
+        persona = EXPERT_PERSONAS[agent_name]
+        # Note: We pass the debug info here as well now
+        memory = construct_memory_stream(user_id, agent_name, supabase)
+        response = get_ai_response(
+            persona_prompt=persona,
+            user_message=prompt,
+            chat_history=memory,
+            user_id_for_debug=user_id,
+            agent_name_for_debug=f"{agent_name}_journal_comment" # Make debug name specific
+        )
+        return response
+
+    # Use asyncio.to_thread to run the blocking function without stalling the event loop
+    loop = asyncio.get_running_loop()
+    response_text = await loop.run_in_executor(None, blocking_ai_call)
+    return response_text
 
 # --- API Endpoints ---
 
@@ -175,21 +186,26 @@ async def get_all_journal_comments_for_user(user_id: str, supabase: Client = Dep
     """
     try:
         res = supabase.table("journal_comments").select(
-                "agent_name, comment_text, created_at, entry:journal_entries!inner(user_id)"
+                "agent_name, comment_text, created_at, entry_id, entry:journal_entries!inner(user_id)"
             ) \
             .eq("entry.user_id", user_id) \
             .execute()
+            
+        # If the query returns no data, res.data can be None. We handle this first.
+        if not res.data:
+            return []
         
-        # We must return data that matches the Pydantic model exactly.
-        # The 'entry' field is not in the AIComment model.
-        comments_without_join_data = [
+        # We now build a list of dictionaries that perfectly matches our updated AIComment model.
+        comments_with_entry_id = [
             {
                 "agent_name": comment["agent_name"],
                 "comment_text": comment["comment_text"],
                 "created_at": comment["created_at"],
+                "entry_id": comment["entry_id"], # <-- Populate the new field
             }
             for comment in res.data
         ]
-        return comments_without_join_data
+        return comments_with_entry_id
     except Exception as e:
+        print(f"ERROR in get_all_journal_comments_for_user: {e}")
         raise HTTPException(status_code=500, detail=str(e))

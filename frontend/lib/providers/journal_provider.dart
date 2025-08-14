@@ -6,7 +6,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../api/api_exception.dart';
 import '../models/journal_timeline_item.dart';
 import '../models/loading_indicator_item.dart';
-import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import '../api/api_service.dart';
 import '../config.dart';
@@ -190,19 +189,6 @@ class JournalProvider with ChangeNotifier {
     }
   }
 
-  // --- NEW HELPER METHOD ---
-  void _updateEntryComments(String entryId, List<AIComment> comments) {
-    final entryIndex = _timelineItems.indexWhere(
-      (item) => item is JournalEntry && item.id == entryId
-    );
-
-    if (entryIndex != -1) {
-      final entry = _timelineItems[entryIndex] as JournalEntry;
-      entry.comments = comments;
-      entry.areCommentsLoading = false; // Turn off the indicator
-      notifyListeners();
-    }
-  }
   @override
   void dispose() {
     disconnect();

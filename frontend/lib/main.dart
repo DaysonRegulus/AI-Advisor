@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/daily_summary_provider.dart';
 import 'providers/journal_provider.dart';
-import 'screens/home_screen.dart';
 import 'screens/main_scaffold.dart';
 
 void main() {

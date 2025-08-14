@@ -6,8 +6,6 @@ import '../providers/daily_summary_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../widgets/daily_summary_card.dart'; // <-- Import new card
 import '../widgets/xp_progress_bar.dart';
-import 'agent_chat_screen.dart';
-import 'journal_list_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   // Add a final variable to hold the function
@@ -15,23 +13,6 @@ class HomeScreen extends StatelessWidget {
 
   // Update the constructor to require this function
   const HomeScreen({Key? key, required this.onRefresh}) : super(key: key);
-
-  // Helper to create a button for an agent
-  Widget _agentButton(BuildContext context, String agentName, String agentTitle, IconData icon) {
-    return ListTile(
-      leading: Icon(icon, size: 40),
-      title: Text(agentTitle),
-      subtitle: Text('Consult the $agentTitle'),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AgentChatScreen(agentName: agentName, agentTitle: agentTitle),
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

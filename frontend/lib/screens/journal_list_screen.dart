@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/journal_provider.dart';
-import '../models/journal_timeline_item.dart';
 import '../models/loading_indicator_item.dart';
 import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';

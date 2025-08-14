@@ -8,6 +8,7 @@ import '../models/user_profile.dart';
 import '../models/daily_summary.dart';
 import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
+import '../models/journal_timeline_item.dart';
 
 class ApiService {
   // IMPORTANT: Use this IP for the Android Emulator to connect to your local machine.
@@ -154,24 +155,6 @@ class ApiService {
     }
   }
 
-  // --- NEW: Get All Journal Entries ---
-  Future<List<JournalEntry>> getJournalEntries() async {
-    final url = Uri.parse('$_baseUrl/journal/all/$_testUserId');
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => JournalEntry.fromJson(json)).toList();
-      } else {
-        final errorData = jsonDecode(response.body);
-        final errorMessage = errorData['detail'] ?? 'Failed to load journal entries.';
-        throw ApiException(errorMessage);
-      }
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Could not connect to the server to get journal entries.');
-    }
-  }
 
   // --- Add Journal Entry Method ---
   Future<JournalEntry?> addJournalEntry(String content) async {
@@ -220,19 +203,27 @@ class ApiService {
     }
   }
 
-  // --- NEW: Get ALL AI Comments for a user ---
-  Future<List<AIComment>> getAllAIComments() async {
-    final url = Uri.parse('$_baseUrl/journal/all-comments/$_testUserId');
+  // --- NEW: Paginated Timeline Fetcher ---
+  Future<List<JournalTimelineItem>> fetchTimelinePage(int page, {int pageSize = 20}) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/journal/timeline?user_id=${AppConfig.testUserId}&page=$page&page_size=$pageSize');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => AIComment.fromJson(json)).toList();
+        // We need to parse the generic items into our specific Dart models
+        return data.map((json) {
+          if (json['item_type'] == 'journal_entry') {
+            return JournalEntry.fromJson(json);
+          } else { // 'ai_comment'
+            return AIComment.fromJson(json);
+          }
+        }).toList();
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw ApiException(errorData['detail'] ?? 'Failed to load timeline');
       }
-      return [];
     } catch (e) {
-      print('Error fetching all AI comments: $e');
-      throw Exception('Failed to fetch all AI comments');
+      throw ApiException('Network error fetching timeline: $e');
     }
   }
 }

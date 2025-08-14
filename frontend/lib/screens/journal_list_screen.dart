@@ -21,6 +21,32 @@ class JournalScreen extends StatefulWidget {
 }
 
 class _JournalScreenState extends State<JournalScreen> {
+
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    // The initial fetch is now handled by the MainScaffold
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    // This is the core logic for triggering the next page load.
+    // We check if the user has scrolled to 90% of the way down the list.
+    if (_scrollController.position.extentAfter < 500) {
+      // Use context.read for one-off calls inside listeners.
+      context.read<JournalProvider>().fetchNextPage();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +56,7 @@ class _JournalScreenState extends State<JournalScreen> {
           // A refresh button can be useful for debugging
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: () => Provider.of<JournalProvider>(context, listen: false).fetchTimeline(),
+            onPressed: () => Provider.of<JournalProvider>(context, listen: false).fetchInitialTimeline(),
           )
         ],
       ),
@@ -56,13 +82,22 @@ class _JournalScreenState extends State<JournalScreen> {
           }
           // The ListView now builds based on the item's type
           return ListView.builder(
+            controller: _scrollController,
             reverse: true, // For chat-like order
             padding: const EdgeInsets.all(8.0),
-            itemCount: provider.timelineItems.length,
+            // We add +1 to the item count to make space for a loading indicator at the end.
+            itemCount: provider.timelineItems.length + (provider.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
+              // If we're at the end of the list and still loading more, show a spinner.
+              if (index >= provider.timelineItems.length) {
+                return const Center(child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ));
+              }
               // The 'reverse: true' ListView gives us an index from 0 to (length - 1).
               // We want to map this to our list from the end to the beginning.
-              final item = provider.timelineItems[provider.timelineItems.length - 1 - index];
+              final item = provider.timelineItems[index];
               if (item is JournalEntry) {
                 return _UserJournalBubble(entry: item);
               } else if (item is AIComment) {

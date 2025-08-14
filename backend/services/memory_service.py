@@ -140,7 +140,6 @@ def get_active_window_log(user_id: str, agent_name: str, start_time: str, supaba
     
     # Combine and sort the results (same logic as before)
     unified_log = []
-    # ... (paste the data standardization and combining logic from the old file here) ...
     # This includes the for loops for interactions_res, journals_res, and comments_res
     # Ensure to use parser.isoparse() for all timestamps.
     if interactions_res.data:

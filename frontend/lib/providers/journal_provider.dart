@@ -20,9 +20,14 @@ class JournalProvider with ChangeNotifier {
   WebSocketChannel? _channel;
   bool _isConnecting = false;
 
+  int _currentPage = 0;
+  bool _hasMoreData = true;
+  bool _isLoadingMore = false; // For loading subsequent pages
+
   // Getters
   List<JournalTimelineItem> get timelineItems => _timelineItems;
   bool get isLoading => _isLoading;
+  bool get isLoadingMore => _isLoadingMore;
   String? get error => _error;
 
   void connect() {
@@ -112,39 +117,47 @@ class JournalProvider with ChangeNotifier {
   }
 
   // This will now be the primary method for fetching and building the journal view.
-  Future<void> fetchTimeline() async {
+  Future<void> fetchInitialTimeline() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
+    // Reset state for a fresh fetch
+    _currentPage = 0;
+    _timelineItems = [];
+    _hasMoreData = true;
+
+    await fetchNextPage(); // Call the main pagination logic
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // --- NEW: The core pagination logic ---
+  Future<void> fetchNextPage() async {
+    // Prevent multiple simultaneous requests
+    if (_isLoadingMore || !_hasMoreData) return;
+
+    _isLoadingMore = true;
+    // Don't call notifyListeners here for a silent background load
+    
     try {
-      // The initial fetch logic remains the same
-      final results = await Future.wait([
-        _apiService.getJournalEntries(),
-        _apiService.getAllAIComments(),
-      ]);
+      final newItems = await _apiService.fetchTimelinePage(_currentPage);
 
-      final List<JournalEntry> entries = results[0] as List<JournalEntry>;
-      final List<AIComment> comments = results[1] as List<AIComment>;
+      if (newItems.isEmpty || newItems.length < 20) {
+        // If we receive fewer items than the page size, we've reached the end.
+        _hasMoreData = false;
+      }
 
-      // 2. Combine them into a single list of the base type
-      List<JournalTimelineItem> combinedItems = [];
-      combinedItems.addAll(entries);
-      combinedItems.addAll(comments);
-
-      // 3. Sort the combined list chronologically
-      combinedItems.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-
-      _timelineItems = combinedItems;
+      _timelineItems.addAll(newItems);
+      _currentPage++;
 
     } on ApiException catch (e) {
       _error = e.message;
-    } catch (e) {
-      _error = "An unexpected error occurred: $e";
+    } finally {
+      _isLoadingMore = false;
+      notifyListeners(); // Notify UI of all changes (new items, error, etc.)
     }
-    
-    _isLoading = false;
-    notifyListeners();
   }
 
   // The "add" method now just adds the entry and then re-fetches the whole timeline
@@ -156,11 +169,10 @@ class JournalProvider with ChangeNotifier {
       if (newEntryFromServer != null) {
         // OPTIMISTICALLY UPDATE THE UI STATE
         
-        // 1. Add the new journal entry itself.
-        _timelineItems.add(newEntryFromServer);
-        
-        // 2. Add our new loading indicator right after it.
-        _timelineItems.add(LoadingIndicatorItem(
+        // Instead of re-fetching, we now optimistically update the state.
+        // Since our list is newest-first from the API, we insert at the start.
+        _timelineItems.insert(0, newEntryFromServer);
+        _timelineItems.insert(1, LoadingIndicatorItem(
           entryId: newEntryFromServer.id,
           // We give it a slightly later timestamp to ensure it sorts correctly.
           createdAt: newEntryFromServer.createdAt.add(const Duration(milliseconds: 1)),

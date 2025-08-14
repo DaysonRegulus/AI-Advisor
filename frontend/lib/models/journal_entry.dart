@@ -25,7 +25,7 @@ class JournalEntry extends JournalTimelineItem {
 
   factory JournalEntry.fromJson(Map<String, dynamic> json) {
     return JournalEntry(
-      id: json['id'],
+      id: json['item_id'],
       content: json['content'],
       createdAt: DateTime.parse(json['created_at']),
       areCommentsVisible: true,

@@ -18,7 +18,7 @@ class AIComment extends JournalTimelineItem {
     return AIComment(
       entryId: json['entry_id'] ?? '',
       agentName: json['agent_name'],
-      commentText: json['comment_text'],
+      commentText: json['content'],
       createdAt: DateTime.parse(json['created_at']),
     );
   }

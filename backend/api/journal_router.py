@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from supabase import Client
 import asyncio
 import json
-from typing import List
+from typing import List, Dict, Any, Optional
 
 # Our project imports
 from dependencies import get_supabase_client
@@ -32,6 +32,14 @@ class AIComment(BaseModel):
     comment_text: str
     created_at: str
     entry_id: str
+
+class TimelineItem(BaseModel):
+    item_id: str
+    item_type: str
+    content: str
+    created_at: str
+    agent_name: Optional[str] = None
+    entry_id: Optional[str] = None
 
 # --- Background Task for Generating Comments ---
 
@@ -155,57 +163,22 @@ async def add_journal_entry(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/journal/comments/{entry_id}", response_model=List[AIComment])
-async def get_journal_comments(entry_id: str, supabase: Client = Depends(get_supabase_client)):
+    
+@router.get("/journal/timeline", response_model=List[TimelineItem])
+async def get_journal_timeline(
+    user_id: str,
+    page: int = 0,
+    page_size: int = 20, # A sensible default page size
+    supabase: Client = Depends(get_supabase_client)
+):
     """
-    Fetches all saved AI comments for a specific journal entry.
+    Fetches a paginated, chronologically sorted list of all journal items
+    (entries and comments) by calling a database function.
     """
     try:
-        res = supabase.table("journal_comments").select("agent_name, comment_text, created_at").eq("entry_id", entry_id).execute()
+        params = {"user_uuid": user_id, "page_size": page_size, "page_number": page}
+        res = supabase.rpc("get_user_timeline_page", params).execute()
         return res.data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@router.get("/journal/all/{user_id}", response_model=List[JournalEntryResponse])
-async def get_all_journal_entries(user_id: str, supabase: Client = Depends(get_supabase_client)):
-    """Fetches all journal entries for a user, most recent first."""
-    try:
-        res = supabase.table("journal_entries").select("*") \
-            .eq("user_id", user_id) \
-            .order("created_at", desc=False) \
-            .execute()
-        return res.data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-@router.get("/journal/all-comments/{user_id}", response_model=List[AIComment])
-async def get_all_journal_comments_for_user(user_id: str, supabase: Client = Depends(get_supabase_client)):
-    """
-    Fetches all AI comments for a given user, formatted correctly.
-    """
-    try:
-        res = supabase.table("journal_comments").select(
-                "agent_name, comment_text, created_at, entry_id, entry:journal_entries!inner(user_id)"
-            ) \
-            .eq("entry.user_id", user_id) \
-            .execute()
-            
-        # If the query returns no data, res.data can be None. We handle this first.
-        if not res.data:
-            return []
-        
-        # We now build a list of dictionaries that perfectly matches our updated AIComment model.
-        comments_with_entry_id = [
-            {
-                "agent_name": comment["agent_name"],
-                "comment_text": comment["comment_text"],
-                "created_at": comment["created_at"],
-                "entry_id": comment["entry_id"], # <-- Populate the new field
-            }
-            for comment in res.data
-        ]
-        return comments_with_entry_id
-    except Exception as e:
-        print(f"ERROR in get_all_journal_comments_for_user: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"ERROR fetching timeline page: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch journal timeline.")

@@ -54,7 +54,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     await Future.wait([
       context.read<UserProfileProvider>().fetchUserProfile(),
       context.read<DailySummaryProvider>().fetchLatestSummary(),
-      context.read<JournalProvider>().fetchTimeline(), // Fetch the journal entries and comments
+      context.read<JournalProvider>().fetchInitialTimeline(), // Fetch the journal entries and comments
       // When we add a ChatProvider or JournalProvider, we will add their fetch methods here too.
       // e.g., context.read<ChatProvider>().fetchRecentChats(),
     ]);

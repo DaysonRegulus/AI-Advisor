@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from supabase import Client
+from typing import List
 import datetime
 
 # Our project imports
@@ -36,6 +37,46 @@ def format_db_history_for_gemini(db_history: list) -> list:
         gemini_history.append({'role': 'user', 'parts': [interaction['user_message']]})
         gemini_history.append({'role': 'model', 'parts': [interaction['ai_response']]})
     return gemini_history
+
+class ChatHistoryItem(BaseModel):
+    user_message: str
+    ai_response: str
+    created_at: datetime.datetime
+    
+# --- Paginated Chat History Endpoint ---
+@router.get(
+    "/ai/chat-history/{agent_name}",
+    response_model=List[ChatHistoryItem],
+    summary="Get Paginated Chat History for an Agent",
+    description="Fetches a page of conversation history for a specific user and agent."
+)
+def get_chat_history(
+    user_id: str,
+    agent_name: str,
+    page: int = 0,
+    page_size: int = 20,
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    Fetches a paginated list of chat interactions, ordered from most recent to oldest.
+    """
+    try:
+        # Calculate the offset for pagination
+        offset = page * page_size
+        
+        # Query the database
+        res = supabase.table("ai_interactions") \
+            .select("user_message, ai_response, created_at") \
+            .eq("user_id", user_id) \
+            .eq("agent_name", agent_name) \
+            .order("created_at", desc=True) \
+            .range(offset, offset + page_size - 1) \
+            .execute()
+
+        return res.data
+    except Exception as e:
+        print(f"ERROR fetching chat history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch chat history.")
 
 # --- The Main Endpoint ---
 @router.post(

@@ -1,6 +1,8 @@
 // lib/screens/chats_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/chat_provider.dart';
 import 'agent_chat_screen.dart';
 
 // A simple data class for our agents
@@ -53,7 +55,11 @@ class ChatsScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AgentChatScreen(agentName: agent.id, agentTitle: agent.title),
+                    builder: (context) => ChangeNotifierProvider(
+                      // Create a new provider instance specifically for this agent's chat
+                      create: (_) => ChatProvider(agentName: agent.id),
+                      child: AgentChatScreen(agentTitle: agent.title),
+                    ),
                   ),
                 );
               },

@@ -10,6 +10,19 @@ import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import '../models/journal_timeline_item.dart';
 
+class ChatHistoryItem {
+  final String userMessage;
+  final String aiResponse;
+  ChatHistoryItem({required this.userMessage, required this.aiResponse});
+
+  factory ChatHistoryItem.fromJson(Map<String, dynamic> json) {
+    return ChatHistoryItem(
+      userMessage: json['user_message'],
+      aiResponse: json['ai_response'],
+    );
+  }
+}
+
 class ApiService {
   // IMPORTANT: Use this IP for the Android Emulator to connect to your local machine.
   // For iOS Simulator, you would use 'http://localhost:8000'.
@@ -224,6 +237,23 @@ class ApiService {
       }
     } catch (e) {
       throw ApiException('Network error fetching timeline: $e');
+    }
+  }
+
+  // --- Paginated Chat History Fetcher ---
+  Future<List<ChatHistoryItem>> fetchChatHistoryPage(String agentName, int page, {int pageSize = 20}) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/ai/chat-history/$agentName?user_id=${AppConfig.testUserId}&page=$page&page_size=$pageSize');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => ChatHistoryItem.fromJson(json)).toList();
+      } else {
+        final errorData = jsonDecode(response.body);
+        throw ApiException(errorData['detail'] ?? 'Failed to load chat history');
+      }
+    } catch (e) {
+      throw ApiException('Network error fetching chat history: $e');
     }
   }
 }

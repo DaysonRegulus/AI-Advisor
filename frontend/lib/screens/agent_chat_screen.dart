@@ -2,20 +2,29 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import '../api/api_service.dart';
+import 'package:provider/provider.dart';
+import '../providers/chat_provider.dart';
 
-// A simple model for a chat message
+// The ChatMessage model we updated earlier
 class ChatMessage {
   final String text;
   final bool isUser;
-  ChatMessage({required this.text, required this.isUser});
+  final bool isTypingIndicator;
+  final bool isError;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.isTypingIndicator = false,
+    this.isError = false,
+  });
 }
 
 class AgentChatScreen extends StatefulWidget {
-  final String agentName;
+  // It no longer needs agentName, only the title for the AppBar
   final String agentTitle;
 
-  const AgentChatScreen({Key? key, required this.agentName, required this.agentTitle}) : super(key: key);
+  const AgentChatScreen({Key? key, required this.agentTitle}) : super(key: key);
 
   @override
   _AgentChatScreenState createState() => _AgentChatScreenState();
@@ -23,29 +32,40 @@ class AgentChatScreen extends StatefulWidget {
 
 class _AgentChatScreenState extends State<AgentChatScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ApiService _apiService = ApiService();
-  final List<ChatMessage> _messages = [];
-  bool _isTyping = false;
+  final ScrollController _scrollController = ScrollController();
 
-  void _sendMessage() async {
-    if (_controller.text.isEmpty) return;
+  @override
+  void initState() {
+    super.initState();
+    // Add a listener to the scroll controller to detect when the user
+    // has scrolled to the top of the list, so we can load older messages.
+    _scrollController.addListener(_onScroll);
+  }
 
-    final userMessage = ChatMessage(text: _controller.text, isUser: true);
-    setState(() {
-      _messages.insert(0, userMessage); // Add message to the top of the list
-      _isTyping = true;
-    });
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
 
-    final textToSend = _controller.text;
+  void _onScroll() {
+    // This is the core logic for triggering pagination.
+    // If the scroll position is at the very end (top of the reversed list),
+    // we trigger the provider to fetch the next page.
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      context.read<ChatProvider>().fetchNextPage();
+    }
+  }
+
+  void _sendMessage() {
+    if (_controller.text.trim().isEmpty) return;
+
+    // Use the provider to send the message. This encapsulates all the logic.
+    context.read<ChatProvider>().sendMessage(_controller.text.trim());
+
     _controller.clear();
-
-    final aiResponseText = await _apiService.interactWithAi(widget.agentName, textToSend);
-    final aiMessage = ChatMessage(text: aiResponseText, isUser: false);
-
-    setState(() {
-      _messages.insert(0, aiMessage);
-      _isTyping = false;
-    });
   }
 
   @override
@@ -54,43 +74,43 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
       appBar: AppBar(title: Text(widget.agentTitle)),
       body: Column(
         children: [
+          // The main chat view area
           Expanded(
-            child: ListView.builder(
-              reverse: true, // Makes the list start from the bottom
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return ListTile(
-                  title: Align(
-                    alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: message.isUser ? Colors.blue[100] : Colors.grey[200],
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: message.isUser
-                        ? Text(message.text, style: const TextStyle(fontSize: 16))
-                        : MarkdownBody(
-                          data: message.text,
-                          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                            p: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
-                          ),
-                          selectable: true,
+            child: Consumer<ChatProvider>(
+              builder: (context, provider, child) {
+                if (provider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (provider.error != null && provider.messages.isEmpty) {
+                  return Center(child: Text("Error: ${provider.error}", style: const TextStyle(color: Colors.red)));
+                }
+                
+                return ListView.builder(
+                  controller: _scrollController,
+                  reverse: true, // Crucial for chat UIs
+                  padding: const EdgeInsets.all(8.0),
+                  // Add +1 to the item count for the loading spinner at the top
+                  itemCount: provider.messages.length + (provider.isLoadingMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    // If we are at the top and loading more, show a spinner
+                    if (provider.isLoadingMore && index == provider.messages.length) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
                         ),
-                    ),
-                  ),
+                      );
+                    }
+
+                    final message = provider.messages[index];
+                    return _ChatMessageBubble(message: message);
+                  },
                 );
               },
             ),
           ),
-          if (_isTyping)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text("Agent is typing...")),
-            ),
+
+          // The text input area
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
@@ -99,12 +119,15 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                   child: TextField(
                     controller: _controller,
                     decoration: const InputDecoration(
-                      hintText: 'Ask me anything...',
-                      border: OutlineInputBorder(),
+                      hintText: 'Ask anything...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(20.0)),
+                      ),
                     ),
                     onSubmitted: (_) => _sendMessage(),
                   ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _sendMessage,
@@ -113,6 +136,53 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// --- NEW: A dedicated stateless widget for the chat bubble ---
+class _ChatMessageBubble extends StatelessWidget {
+  final ChatMessage message;
+
+  const _ChatMessageBubble({Key? key, required this.message}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Special case for the "typing..." indicator
+    if (message.isTypingIndicator) {
+      return const Align(
+        alignment: Alignment.centerLeft,
+        child: Text("Agent is typing...", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+      );
+    }
+
+    return Align(
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: message.isError
+              ? Colors.red[100]
+              : message.isUser
+                  ? Colors.green[100]
+                  : Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: message.isUser
+            ? Text(message.text, style: const TextStyle(fontSize: 16))
+            : MarkdownBody(
+                data: message.text,
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 16,
+                      color: message.isError ? Colors.red[900] : null,
+                  ),
+                ),
+                selectable: true,
+              ),
       ),
     );
   }

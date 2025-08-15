@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/daily_summary_provider.dart';
 import '../providers/user_profile_provider.dart';
-import '../widgets/daily_summary_card.dart'; // <-- Import new card
+import '../widgets/daily_summary_card.dart';
 import '../widgets/xp_progress_bar.dart';
 
 class HomeScreen extends StatelessWidget {

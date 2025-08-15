@@ -1,6 +1,7 @@
 // lib/screens/agent_chat_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../api/api_service.dart';
 
 // A simple model for a chat message
@@ -68,7 +69,15 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
                         color: message.isUser ? Colors.blue[100] : Colors.grey[200],
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Text(message.text),
+                      child: message.isUser
+                        ? Text(message.text, style: const TextStyle(fontSize: 16))
+                        : MarkdownBody(
+                          data: message.text,
+                          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                            p: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                          ),
+                          selectable: true,
+                        ),
                     ),
                   ),
                 );

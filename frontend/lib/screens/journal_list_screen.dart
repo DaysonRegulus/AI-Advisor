@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
@@ -203,7 +204,7 @@ class __UserJournalBubbleState extends State<_UserJournalBubble> {
                     maxLines: _isExpanded ? null : 3, // Show all lines if expanded
                     overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
                   ),
-                  // --- THE FIX: Conditionally show the "Read More" text ---
+                  // --- Conditionally show the "Read More" text ---
                   if (_isExpandable && !_isExpanded)
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
@@ -281,7 +282,13 @@ class _AiCommentBubble extends StatelessWidget {
                   ),
                   Text(DateFormat('MMM d, h:mm a').format(comment.createdAt.toLocal()), style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                   const SizedBox(height: 5),
-                  Text(comment.commentText, style: const TextStyle(fontSize: 16)),
+                  MarkdownBody(
+                    data: comment.commentText,
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                      p: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                    ),
+                    selectable: true, // Allows users to copy text from the comment
+                  ),
                 ],
               ),
             ),

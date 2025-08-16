@@ -11,12 +11,18 @@ class ChatMessage {
   final bool isUser;
   final bool isTypingIndicator;
   final bool isError;
+  final bool isJournalComment;
+  final String? entryId;
+  final String? journalContent;
 
   ChatMessage({
     required this.text,
     required this.isUser,
     this.isTypingIndicator = false,
     this.isError = false,
+    this.isJournalComment = false, 
+    this.entryId,
+    this.journalContent,
   });
 }
 

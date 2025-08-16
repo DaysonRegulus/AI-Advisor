@@ -49,17 +49,30 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final historyItems = await _apiService.fetchChatHistoryPage(agentName, _currentPage);
+      // Call the new API method
+      final timelineItems = await _apiService.fetchAgentTimelinePage(agentName, _currentPage);
 
-      if (historyItems.isEmpty) {
+      if (timelineItems.isEmpty) {
         _hasMoreData = false;
       } else {
-        // The API returns newest-first. We need to convert them to ChatMessage objects
-        // and add them to the end of our existing list.
-        for (var item in historyItems) {
-          // Add the AI response first, then the user message, to maintain the chat flow
-          _messages.add(ChatMessage(text: item.aiResponse, isUser: false));
-          _messages.add(ChatMessage(text: item.userMessage, isUser: true));
+        // Now we process the unified timeline
+        for (var item in timelineItems) {
+          if (item.itemType == 'chat_interaction') {
+            // This is a standard chat message
+            if(item.aiResponse != null) _messages.add(ChatMessage(text: item.aiResponse!, isUser: false));
+            if(item.userMessage != null) _messages.add(ChatMessage(text: item.userMessage!, isUser: true));
+          } else if (item.itemType == 'journal_comment') {
+            // This is a journal comment, which we'll represent as a special AI message
+            if(item.aiResponse != null) {
+               _messages.add(ChatMessage(
+                text: item.aiResponse!,
+                isUser: false,
+                isJournalComment: true, // <-- The special flag
+                entryId: item.entryId,
+                journalContent: item.journalContent,
+              ));
+            }
+          }
         }
         _currentPage++;
       }

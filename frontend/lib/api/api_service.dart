@@ -10,15 +10,28 @@ import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import '../models/journal_timeline_item.dart';
 
-class ChatHistoryItem {
-  final String userMessage;
-  final String aiResponse;
-  ChatHistoryItem({required this.userMessage, required this.aiResponse});
+class AgentTimelineItem {
+  final String itemType;
+  final String? userMessage;
+  final String? aiResponse;
+  final String? entryId;
+  final String? journalContent;
 
-  factory ChatHistoryItem.fromJson(Map<String, dynamic> json) {
-    return ChatHistoryItem(
+  AgentTimelineItem({
+    required this.itemType,
+    this.userMessage,
+    this.aiResponse,
+    this.entryId,
+    this.journalContent,
+  });
+
+  factory AgentTimelineItem.fromJson(Map<String, dynamic> json) {
+    return AgentTimelineItem(
+      itemType: json['item_type'],
       userMessage: json['user_message'],
       aiResponse: json['ai_response'],
+      entryId: json['entry_id'],
+      journalContent: json['journal_content'],
     );
   }
 }
@@ -240,20 +253,20 @@ class ApiService {
     }
   }
 
-  // --- Paginated Chat History Fetcher ---
-  Future<List<ChatHistoryItem>> fetchChatHistoryPage(String agentName, int page, {int pageSize = 20}) async {
-    final url = Uri.parse('${AppConfig.baseUrl}/api/ai/chat-history/$agentName?user_id=${AppConfig.testUserId}&page=$page&page_size=$pageSize');
+  // --- Paginated Agent Timeline Fetcher ---
+  Future<List<AgentTimelineItem>> fetchAgentTimelinePage(String agentName, int page, {int pageSize = 20}) async {
+    final url = Uri.parse('${AppConfig.baseUrl}/api/ai/timeline/$agentName?user_id=${AppConfig.testUserId}&page=$page&page_size=$pageSize');
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => ChatHistoryItem.fromJson(json)).toList();
+        return data.map((json) => AgentTimelineItem.fromJson(json)).toList();
       } else {
         final errorData = jsonDecode(response.body);
-        throw ApiException(errorData['detail'] ?? 'Failed to load chat history');
+        throw ApiException(errorData['detail'] ?? 'Failed to load agent timeline');
       }
     } catch (e) {
-      throw ApiException('Network error fetching chat history: $e');
+      throw ApiException('Network error fetching agent timeline: $e');
     }
   }
 }

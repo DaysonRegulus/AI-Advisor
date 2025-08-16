@@ -38,19 +38,24 @@ def format_db_history_for_gemini(db_history: list) -> list:
         gemini_history.append({'role': 'model', 'parts': [interaction['ai_response']]})
     return gemini_history
 
-class ChatHistoryItem(BaseModel):
-    user_message: str
-    ai_response: str
+# --- Pydantic model for a unified timeline item ---
+class AgentTimelineItem(BaseModel):
+    item_id: str
+    item_type: str
+    user_message: str | None = None
+    ai_response: str | None = None
     created_at: datetime.datetime
-    
-# --- Paginated Chat History Endpoint ---
+    entry_id: str | None = None
+    journal_content: str | None = None
+
+# --- Paginated Agent Timeline Endpoint ---
 @router.get(
-    "/ai/chat-history/{agent_name}",
-    response_model=List[ChatHistoryItem],
-    summary="Get Paginated Chat History for an Agent",
-    description="Fetches a page of conversation history for a specific user and agent."
+    "/ai/timeline/{agent_name}",
+    response_model=List[AgentTimelineItem],
+    summary="Get Paginated Unified Timeline for an Agent",
+    description="Fetches a page of a user's timeline from a specific agent's perspective, including chats and journal comments."
 )
-def get_chat_history(
+def get_agent_timeline(
     user_id: str,
     agent_name: str,
     page: int = 0,
@@ -58,25 +63,20 @@ def get_chat_history(
     supabase: Client = Depends(get_supabase_client)
 ):
     """
-    Fetches a paginated list of chat interactions, ordered from most recent to oldest.
+    Calls the get_agent_timeline_page database function to fetch the unified timeline.
     """
     try:
-        # Calculate the offset for pagination
-        offset = page * page_size
-        
-        # Query the database
-        res = supabase.table("ai_interactions") \
-            .select("user_message, ai_response, created_at") \
-            .eq("user_id", user_id) \
-            .eq("agent_name", agent_name) \
-            .order("created_at", desc=True) \
-            .range(offset, offset + page_size - 1) \
-            .execute()
-
+        params = {
+            "user_uuid": user_id,
+            "agent_name_param": agent_name,
+            "page_size": page_size,
+            "page_number": page
+        }
+        res = supabase.rpc("get_agent_timeline_page", params).execute()
         return res.data
     except Exception as e:
-        print(f"ERROR fetching chat history: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch chat history.")
+        print(f"ERROR fetching agent timeline: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch agent timeline.")
 
 # --- The Main Endpoint ---
 @router.post(

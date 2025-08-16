@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from supabase import Client
-from typing import List
+from typing import List, Optional
 import datetime
 
 # Our project imports
@@ -42,11 +42,11 @@ def format_db_history_for_gemini(db_history: list) -> list:
 class AgentTimelineItem(BaseModel):
     item_id: str
     item_type: str
-    user_message: str | None = None
-    ai_response: str | None = None
+    user_message: Optional[str] = None
+    ai_response: Optional[str] = None
     created_at: datetime.datetime
-    entry_id: str | None = None
-    journal_content: str | None = None
+    entry_id: Optional[str] = None
+    journal_content: Optional[str] = None
 
 # --- Paginated Agent Timeline Endpoint ---
 @router.get(

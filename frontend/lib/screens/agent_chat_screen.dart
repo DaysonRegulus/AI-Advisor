@@ -155,41 +155,130 @@ class _ChatMessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Special case for the "typing..." indicator
+    // Special case for the "typing..." indicator (this logic is unchanged)
     if (message.isTypingIndicator) {
-      return const Align(
+      return Align(
         alignment: Alignment.centerLeft,
-        child: Text("Agent is typing...", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Text("Agent is typing...", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+        ),
       );
     }
 
+    // Determine bubble alignment and color based on message type
+    final alignment = message.isUser ? Alignment.centerRight : Alignment.centerLeft;
+    final bubbleColor = message.isError
+        ? Colors.red[100]
+        : message.isUser
+            ? Colors.green[100]
+            : Colors.grey[200];
+    final textColor = message.isError ? Colors.red[900] : null;
+
+    // --- Conditionally build the content of the bubble ---
+    Widget bubbleContent;
+
+    if (message.isJournalComment) {
+      // This is a special comment bubble with a "quoted reply"
+      bubbleContent = _buildJournalCommentContent(context, textColor);
+    } else {
+      // This is a standard chat message
+      bubbleContent = _buildStandardMessageContent(context, textColor);
+    }
+
     return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: alignment,
       child: Container(
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: message.isError
-              ? Colors.red[100]
-              : message.isUser
-                  ? Colors.green[100]
-                  : Colors.grey[200],
+          color: bubbleColor,
           borderRadius: BorderRadius.circular(16),
         ),
-        child: message.isUser
-            ? Text(message.text, style: const TextStyle(fontSize: 16))
-            : MarkdownBody(
-                data: message.text,
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  p: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      color: message.isError ? Colors.red[900] : null,
-                  ),
-                ),
-                selectable: true,
-              ),
+        child: bubbleContent,
       ),
+    );
+  }
+
+  // --- Helper method to build a standard message ---
+  Widget _buildStandardMessageContent(BuildContext context, Color? textColor) {
+    return message.isUser
+        ? Text(message.text, style: TextStyle(fontSize: 16, color: textColor))
+        : MarkdownBody(
+            data: message.text,
+            selectable: true,
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+            ),
+          );
+  }
+
+  // --- Helper method to build the rich journal comment content ---
+  Widget _buildJournalCommentContent(BuildContext context, Color? textColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // The "Quoted Reply" Snippet
+        Container(
+          padding: const EdgeInsets.all(8),
+          margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.05), // A slightly darker shade
+            borderRadius: BorderRadius.circular(8),
+            border: Border(
+              left: BorderSide(
+                color: Colors.green.shade300, // Accent color
+                width: 4,
+              ),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Regarding your journal entry:",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                message.journalContent ?? "Could not load journal content.",
+                maxLines: 2, // Show a snippet
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // The actual AI comment, rendered with Markdown
+        MarkdownBody(
+          data: message.text,
+          selectable: true,
+          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+            p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 16,
+                  color: textColor,
+                ),
+          ),
+        ),
+      ],
     );
   }
 }

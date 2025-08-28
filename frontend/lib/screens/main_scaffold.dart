@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../providers/daily_summary_provider.dart';
 import '../providers/journal_provider.dart';
+import '../providers/goal_provider.dart';
+import '../providers/dashboard_provider.dart';
 import 'home_screen.dart';
 import 'chats_screen.dart';
 import 'journal_list_screen.dart';
@@ -55,6 +57,8 @@ class _MainScaffoldState extends State<MainScaffold> {
       context.read<UserProfileProvider>().fetchUserProfile(),
       context.read<DailySummaryProvider>().fetchLatestSummary(),
       context.read<JournalProvider>().fetchInitialTimeline(), // Fetch the journal entries and comments
+      context.read<GoalProvider>().fetchGoals(),
+      context.read<DashboardProvider>().fetchDashboardData(),
       // When we add a ChatProvider or JournalProvider, we will add their fetch methods here too.
       // e.g., context.read<ChatProvider>().fetchRecentChats(),
     ]);

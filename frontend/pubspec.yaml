@@ -41,6 +41,7 @@ dependencies:
   percent_indicator: ^4.2.5
   animated_text_kit: ^4.2.3
   web_socket_channel: ^3.0.3
+  sleek_circular_slider: ^2.1.0
 
 dev_dependencies:
   flutter_test:

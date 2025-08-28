@@ -4,8 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/daily_summary_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/goal_provider.dart';
+
 import '../widgets/daily_summary_card.dart';
 import '../widgets/xp_progress_bar.dart';
+import '../widgets/water_tracker_card.dart';
+import '../widgets/weight_tracker_card.dart';
+import '../widgets/calorie_tracker_header.dart'; 
+import '../widgets/food_timeline.dart';
 
 class HomeScreen extends StatelessWidget {
   // Add a final variable to hold the function
@@ -16,9 +23,21 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // We fetch the dashboard data here when the screen is built.
+    // This is better than the main_scaffold for screen-specific data.
+    final dashboardProvider = Provider.of<DashboardProvider>(context, listen: false);
+    if (dashboardProvider.latestWeightLog == null) { // Simple check to see if we've fetched data
+      dashboardProvider.fetchDashboardData();
+    }
+    
+    final goalProvider = Provider.of<GoalProvider>(context, listen: false);
+    if (goalProvider.userGoals == null) {
+      goalProvider.fetchGoals();
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI Advisor Dashboard'),
+        title: const Text('Dashboard'),
         actions: [
           // Button to trigger the summary generation
           IconButton(
@@ -45,8 +64,9 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             children: const [
               Row(
-                children: [
-                  const XpProgressBar(), // Our new circular progress bar
+                children: const [
+                  Expanded(child: XpProgressBar()), // Takes up left side
+                  Expanded(child: CalorieTrackerHeader()), // Takes up right side
                   // We can add other quick stats here later
                 ],
               ),
@@ -56,6 +76,23 @@ class HomeScreen extends StatelessWidget {
               const DailySummaryCard(),
               const SizedBox(height: 16),
               const Divider(indent: 16, endIndent: 16),
+
+              const SizedBox(height: 16),
+            
+              // --- TRACKER CARDS ---
+              const WaterTrackerCard(),
+              const SizedBox(height: 8),
+              const WeightTrackerCard(),
+
+              const SizedBox(height: 24),
+
+              // --- FOOD TIMELINE ---
+              const Text(
+                "Today's Food Log",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const Divider(height: 16),
+              const FoodTimeline(),
             ],
           ),
         ),

@@ -12,6 +12,7 @@ from dependencies import get_supabase_client
 router = APIRouter()
 
 # --- Pydantic Models ---
+
 class LogWeightRequest(BaseModel):
     user_id: str
     weight_kg: float = Field(..., gt=0)
@@ -28,6 +29,23 @@ class LogFoodRequest(BaseModel):
     calories: float
     macros: Optional[Dict[str, float]] = None
     micros: Optional[Dict[str, float]] = None
+    
+class WeightLogResponse(BaseModel):
+    id: str
+    user_id: str
+    weight_kg: float
+    created_at: datetime
+
+class WaterLogResponse(BaseModel):
+    id: str
+    user_id: str
+    amount_ml: int
+    created_at: datetime
+    
+class DashboardData(BaseModel):
+    todays_water_intake: int
+    todays_calorie_intake: float
+    latest_weight_log: Optional[WeightLogResponse] = None
 
 class UserGoals(BaseModel):
     user_id: str
@@ -49,14 +67,27 @@ async def award_xp(user_id: str, amount: int, event_name: str):
         print(f"CRITICAL WARNING: Action was logged, but failed to award XP. Status: {e.response.status_code}")
 
 # --- Endpoints ---
+@router.get("/trackers/dashboard/{user_id}", response_model=DashboardData)
+async def get_dashboard_data(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    try:
+        res = supabase.rpc("get_dashboard_data", {"user_uuid": user_id}).execute()
+        return res.data
+    except Exception as e:
+        print(f"Error fetching dashboard data: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch dashboard data.")
 
-@router.post("/trackers/log-weight", status_code=status.HTTP_201_CREATED)
+@router.post("/trackers/log-weight", response_model=WeightLogResponse, status_code=status.HTTP_201_CREATED)
 async def log_weight(request: LogWeightRequest, supabase: Client = Depends(get_supabase_client)):
-    # 1. Log the new weight
-    supabase.table("weight_logs").insert({
+    # 1. Log the new weight and immediately get the created object back
+    insert_res = supabase.table("weight_logs").insert({
         "user_id": request.user_id,
         "weight_kg": request.weight_kg
     }).execute()
+
+    if not insert_res.data:
+        raise HTTPException(status_code=500, detail="Failed to log weight.")
+    
+    new_log = insert_res.data[0]
 
     # 2. Check if user should be awarded XP (logged once a week)
     one_week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
@@ -69,16 +100,22 @@ async def log_weight(request: LogWeightRequest, supabase: Client = Depends(get_s
     if recent_logs.count == 1:
         await award_xp(request.user_id, 100, "weekly_weight_log")
 
-    return {"status": "success", "message": "Weight logged successfully."}
+    # 3. Return the newly created log object
+    return new_log
 
 @router.post("/trackers/log-water", status_code=status.HTTP_201_CREATED)
 async def log_water(request: LogWaterRequest, supabase: Client = Depends(get_supabase_client)):
     # Dual-action: log to water_logs for aggregation and food_logs for timeline
     # 1. Log to water_logs
-    supabase.table("water_logs").insert({
+    insert_res = supabase.table("water_logs").insert({
         "user_id": request.user_id,
         "amount_ml": request.amount_ml
     }).execute()
+
+    if not insert_res.data:
+        raise HTTPException(status_code=500, detail="Failed to log to water_logs.")
+
+    new_water_log = insert_res.data[0]
 
     # 2. Log to food_logs for timeline view
     supabase.table("food_logs").insert({
@@ -92,7 +129,8 @@ async def log_water(request: LogWaterRequest, supabase: Client = Depends(get_sup
     # 3. Award XP for every log
     await award_xp(request.user_id, 5, "water_log")
 
-    return {"status": "success", "message": "Water intake logged."}
+    # 4. Return the primary created object
+    return new_water_log
 
 @router.post("/trackers/log-food", status_code=status.HTTP_201_CREATED)
 async def log_food(request: LogFoodRequest, supabase: Client = Depends(get_supabase_client)):
@@ -132,4 +170,19 @@ async def get_user_goals(user_id: str, supabase: Client = Depends(get_supabase_c
         raise HTTPException(status_code=404, detail="User goals not found.")
     return res.data
 
-# Add more GET endpoints for fetching history later as needed (e.g., for charts)
+@router.get("/trackers/water/today/{user_id}")
+async def get_todays_water(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    res = supabase.table("water_logs").select("*").eq("user_id", user_id).gte("created_at", start_of_day).execute()
+    return res.data
+
+@router.get("/trackers/food/today/{user_id}")
+async def get_todays_food(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    res = supabase.table("food_logs").select("*").eq("user_id", user_id).gte("created_at", start_of_day).execute()
+    return res.data
+
+@router.get("/trackers/weight/history/{user_id}")
+async def get_weight_history(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    res = supabase.table("weight_logs").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(100).execute()
+    return res.data

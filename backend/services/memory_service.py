@@ -44,6 +44,15 @@ def construct_memory_stream(user_id: str, agent_name: str, supabase: Client) -> 
             gemini_history.append({'role': 'user', 'parts': [summary_prompt]})
             gemini_history.append({'role': 'model', 'parts': ["Understood. I will use this long-term context for our conversation."]})
             print("Added cumulative summary to memory stream.")
+            
+        # --- Fetch Current Day's Tracker Data ---
+        tracker_context = get_todays_tracker_context(user_id, agent_name, supabase)
+        if tracker_context:
+            # Prepend the tracker context to the memory stream
+            gemini_history.append({'role': 'user', 'parts': [f"[Today's Tracker Data]:\n{tracker_context}"]})
+            gemini_history.append({'role': 'model', 'parts': ["Understood. I will use this real-time health data in my analysis."]})
+            print(f"Added tracker context for {agent_name}.")
+
 
         # 3. Fetch the "Active Window" of raw logs
         # This uses the same logic as our old memory service, but now it's filtered by time.
@@ -163,3 +172,51 @@ def get_active_window_log(user_id: str, agent_name: str, start_time: str, supaba
 
     unified_log.sort(key=lambda x: x['timestamp'])
     return unified_log
+
+def get_todays_tracker_context(user_id: str, agent_name: str, supabase: Client) -> str:
+    """
+    Fetches and formats a string of today's relevant tracker data for a specific agent.
+    """
+    context_parts = []
+    start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+    # Define which trackers are relevant for each agent
+    relevance_map = {
+        'personal_trainer': ['weight', 'water', 'calories', 'food'],
+        'mental_health_professional': [],
+        'financial_advisor': [],
+        'career_coach': [],
+        'communication_coach': [],
+        'productivity_coach': ['food'],
+        'personal_stylist': ['weight'],
+        'master_overseer': ['weight', 'water', 'calories', 'food']
+    }
+    
+    agent_relevance = relevance_map.get(agent_name, [])
+    if not agent_relevance:
+        return ""
+
+    # Fetch data based on relevance
+    if 'weight' in agent_relevance:
+        res = supabase.table("weight_logs").select("weight_kg").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+        if res.data:
+            context_parts.append(f"Latest Weight: {res.data[0]['weight_kg']} kg")
+
+    if 'water' in agent_relevance:
+        res = supabase.table("water_logs").select("amount_ml").eq("user_id", user_id).gte("created_at", start_of_day).execute()
+        if res.data:
+            total_water = sum(item['amount_ml'] for item in res.data)
+            context_parts.append(f"Water Intake Today: {total_water} ml")
+
+    if 'calories' in agent_relevance:
+        res = supabase.table("food_logs").select("calories").eq("user_id", user_id).gte("created_at", start_of_day).execute()
+        if res.data:
+            total_calories = sum(item['calories'] for item in res.data if item['calories'] is not None)
+            context_parts.append(f"Calories Consumed Today: {total_calories:.0f} kcal")
+
+    # For 'food', we just indicate that the agent has access to it.
+    # The full log is already in the main memory stream via `get_active_window_log`.
+    if 'food' in agent_relevance:
+        context_parts.append("Daily food log is available in the history.")
+        
+    return " | ".join(context_parts)

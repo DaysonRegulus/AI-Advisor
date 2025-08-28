@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/daily_summary_provider.dart';
 import 'providers/journal_provider.dart';
+import 'providers/goal_provider.dart';
+import 'providers/dashboard_provider.dart';
 import 'screens/main_scaffold.dart';
 
 void main() {
@@ -21,7 +23,9 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => UserProfileProvider()),
         ChangeNotifierProvider(create: (context) => DailySummaryProvider()),
-        ChangeNotifierProvider(create: (context) => JournalProvider()), // <-- Add new provider
+        ChangeNotifierProvider(create: (context) => JournalProvider()),
+        ChangeNotifierProvider(create: (context) => GoalProvider()),
+        ChangeNotifierProvider(create: (context) => DashboardProvider()),
       ],
       child: MaterialApp(
         title: 'Personal AI Advisor',

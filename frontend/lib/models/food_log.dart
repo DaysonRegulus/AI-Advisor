@@ -1,0 +1,19 @@
+// lib/models/food_log.dart
+class FoodLog {
+  final String id;
+  final String foodName;
+  final String mealType;
+  final double calories;
+  // Add other fields as needed later
+  
+  FoodLog({required this.id, required this.foodName, required this.mealType, required this.calories});
+
+  factory FoodLog.fromJson(Map<String, dynamic> json) {
+    return FoodLog(
+      id: json['id'],
+      foodName: json['food_name'],
+      mealType: json['meal_type'],
+      calories: (json['calories'] as num).toDouble(),
+    );
+  }
+}

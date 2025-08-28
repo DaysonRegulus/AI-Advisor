@@ -9,6 +9,11 @@ import '../models/daily_summary.dart';
 import '../models/journal_entry.dart';
 import '../models/ai_comment.dart';
 import '../models/journal_timeline_item.dart';
+import '../models/user_goals.dart';
+import '../models/weight_log.dart';
+import '../models/water_log.dart';
+import '../models/food_log.dart';
+import '../models/dashboard_data.dart';
 
 class AgentTimelineItem {
   final String itemType;
@@ -44,6 +49,107 @@ class ApiService {
   // For testing, we need a hardcoded user ID.
   // Later, this will come from a login/auth process.
   static const String _testUserId = AppConfig.testUserId;
+
+  // --- Implementation of the new methods ---
+
+  Future<UserGoals?> getUserGoals() async {
+    final url = Uri.parse('$_baseUrl/trackers/goals/$_testUserId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return UserGoals.fromJson(jsonDecode(response.body));
+      }
+      return null; // A user might not have goals set yet
+    } catch (e) {
+      print("Error fetching user goals: $e");
+      return null;
+    }
+  }
+
+  Future<DashboardData?> getDashboardData() async {
+    final url = Uri.parse('$_baseUrl/trackers/dashboard/$_testUserId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return DashboardData.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      throw ApiException('Could not load dashboard data.');
+    }
+  }
+
+  Future<void> logWater(int amountMl) async {
+    final url = Uri.parse('$_baseUrl/trackers/log-water');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': _testUserId, 'amount_ml': amountMl}),
+      );
+      if (response.statusCode != 201) {
+        throw ApiException('Failed to log water intake.');
+      }
+    } catch (e) {
+      throw ApiException('Could not connect to server to log water.');
+    }
+  }
+
+  // Log weight now returns the created log to update the UI instantly
+  Future<WeightLog?> logWeight(double weightKg) async {
+    final url = Uri.parse('$_baseUrl/trackers/log-weight');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'user_id': _testUserId, 'weight_kg': weightKg}),
+      );
+      if(response.statusCode == 201) {
+        // Parse the real object returned from the server
+        return WeightLog.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      throw ApiException('Could not save weight log.');
+    }
+  }
+  
+  Future<List<WaterLog>> getTodaysWaterLogs() async {
+    final url = Uri.parse('$_baseUrl/trackers/water/today/$_testUserId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => WaterLog.fromJson(json)).toList();
+    }
+    return [];
+  }
+
+  Future<List<FoodLog>> getTodaysFoodLogs() async {
+        final url = Uri.parse('$_baseUrl/trackers/food/today/$_testUserId');
+        try {
+          final response = await http.get(url);
+          if (response.statusCode == 200) {
+            final List<dynamic> data = jsonDecode(response.body);
+            return data.map((json) => FoodLog.fromJson(json)).toList();
+          }
+          // Return an empty list on failure, which is a safe default
+          return [];
+        } catch (e) {
+          print('Error fetching today\'s food logs: $e');
+          // Re-throw as a custom exception if you have more granular error handling on the UI
+          throw ApiException('Could not fetch food log. Please check your network.');
+        }
+      }
+  
+  Future<List<WeightLog>> getWeightHistory() async {
+    final url = Uri.parse('$_baseUrl/trackers/weight/history/$_testUserId');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => WeightLog.fromJson(json)).toList();
+    }
+    return [];
+  }
 
   // --- AI Interaction Method ---
   Future<String> interactWithAi(String agentName, String message) async {

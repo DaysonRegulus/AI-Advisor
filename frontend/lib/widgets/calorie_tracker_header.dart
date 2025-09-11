@@ -5,6 +5,8 @@ import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 
 import '../providers/dashboard_provider.dart';
 import '../providers/goal_provider.dart';
+import '../providers/calorie_provider.dart';
+import '../screens/trackers/calorie_tracker_screen.dart';
 
 class CalorieTrackerHeader extends StatelessWidget {
   const CalorieTrackerHeader({Key? key}) : super(key: key);
@@ -21,26 +23,40 @@ class CalorieTrackerHeader extends StatelessWidget {
     // Change color as the user approaches their goal
     final progressBarColor = percentage > 100 ? Colors.red : Colors.orange;
 
-    return SleekCircularSlider(
-      appearance: CircularSliderAppearance(
-        size: 150, // Larger than the water tracker
-        angleRange: 180, // Make it a semi-circle
-        startAngle: 180,
-        customWidths: CustomSliderWidths(progressBarWidth: 10, trackWidth: 10),
-        customColors: CustomSliderColors(
-          trackColor: Colors.grey[200],
-          progressBarColor: progressBarColor,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            // The CalorieProvider needs to be available to the new screen
+            builder: (_) => ChangeNotifierProvider(
+              create: (context) => CalorieProvider(),
+              child: const CalorieTrackerScreen(),
+            ),
+          ),
+        );
+      },
+      child: SleekCircularSlider(
+        appearance: CircularSliderAppearance(
+          size: 150, // Larger than the water tracker
+          angleRange: 180, // Make it a semi-circle
+          startAngle: 180,
+          customWidths: CustomSliderWidths(progressBarWidth: 10, trackWidth: 10),
+          customColors: CustomSliderColors(
+            trackColor: Colors.grey[200],
+            progressBarColor: progressBarColor,
+          ),
+          infoProperties: InfoProperties(
+            mainLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+            bottomLabelText: "Kcal",
+            bottomLabelStyle: const TextStyle(color: Colors.grey),
+            modifier: (value) => currentCalories.toString(),
+          ),
         ),
-        infoProperties: InfoProperties(
-          mainLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
-          bottomLabelText: "Kcal",
-          bottomLabelStyle: const TextStyle(color: Colors.grey),
-          modifier: (value) => currentCalories.toString(),
-        ),
-      ),
-      min: 0,
-      max: 100,
-      initialValue: percentage,
+        min: 0,
+        max: 100,
+        initialValue: percentage,
+      )
     );
   }
 }

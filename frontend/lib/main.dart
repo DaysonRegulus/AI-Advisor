@@ -9,6 +9,7 @@ import 'providers/goal_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/food_timeline_provider.dart';
 import 'providers/refresh_provider.dart';
+import 'providers/calorie_provider.dart';
 import 'screens/main_scaffold.dart';
 import 'locator.dart';
 
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => DashboardProvider()),
         ChangeNotifierProvider(create: (context) => FoodTimelineProvider()),
         ChangeNotifierProvider(create: (context) => RefreshProvider()),
+        ChangeNotifierProvider(create: (context) => CalorieProvider()),
       ],
       child: MaterialApp(
         title: 'Personal AI Advisor',

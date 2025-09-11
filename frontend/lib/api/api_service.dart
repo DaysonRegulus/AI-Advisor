@@ -14,6 +14,8 @@ import '../models/weight_log.dart';
 import '../models/water_log.dart';
 import '../models/food_log.dart';
 import '../models/dashboard_data.dart';
+import '../models/nutrient_breakdown.dart';
+import '../models/chart_data_point.dart';
 
 class AgentTimelineItem {
   final String itemType;
@@ -410,6 +412,35 @@ class ApiService {
       }
     } catch (e) {
       throw ApiException('Network error fetching agent timeline: $e');
+    }
+  }
+
+  // --- Fetch Daily Nutrient Breakdown ---
+  Future<NutrientBreakdown?> getDailyNutrientBreakdown() async {
+    final url = Uri.parse('$_baseUrl/trackers/calories/daily-breakdown/$_testUserId');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        return NutrientBreakdown.fromJson(jsonDecode(response.body));
+      }
+      return null;
+    } catch (e) {
+      throw ApiException('Could not load calorie breakdown.');
+    }
+  }
+
+  // --- Fetch Weight Chart History ---
+  Future<List<ChartDataPoint>> getWeightChartHistory({int days = 7}) async {
+    final url = Uri.parse('$_baseUrl/trackers/weight/chart-history?user_id=$_testUserId&period_days=$days');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => ChartDataPoint.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw ApiException('Could not load weight chart data.');
     }
   }
 }

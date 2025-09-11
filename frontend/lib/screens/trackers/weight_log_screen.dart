@@ -1,141 +1,192 @@
 // lib/screens/trackers/weight_log_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 
 import '../../api/api_service.dart';
+import '../../locator.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../providers/user_profile_provider.dart';
-import '../../locator.dart';
+import '../../providers/weight_log_provider.dart';
+import '../../models/chart_data_point.dart';
 
-class WeightLogScreen extends StatefulWidget {
+class WeightLogScreen extends StatelessWidget {
   const WeightLogScreen({Key? key}) : super(key: key);
 
   @override
-  _WeightLogScreenState createState() => _WeightLogScreenState();
+  Widget build(BuildContext context) {
+    // We wrap the screen in our new provider
+    return ChangeNotifierProvider(
+      create: (context) => WeightLogProvider(locator<ApiService>()),
+      child: const _WeightLogScreenContent(),
+    );
+  }
 }
 
-class _WeightLogScreenState extends State<WeightLogScreen> {
+class _WeightLogScreenContent extends StatefulWidget {
+  const _WeightLogScreenContent({Key? key}) : super(key: key);
+
+  @override
+  _WeightLogScreenContentState createState() => _WeightLogScreenContentState();
+}
+
+class _WeightLogScreenContentState extends State<_WeightLogScreenContent> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _weightController = TextEditingController();
   bool _isSaving = false;
 
-  Future<void> _saveWeight() async {
-    print("--- Save Weight Initiated ---");
-    // 1. Validate the form input
-    if (!_formKey.currentState!.validate()) {
-      print("Validation failed. Aborting.");
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fetch initial 7-day chart data when the screen loads
+      context.read<WeightLogProvider>().fetchChartData();
+    });
+  }
 
+  Future<void> _saveWeight() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() { _isSaving = true; });
-    print("State set to 'isSaving = true'.");
 
     final weight = double.tryParse(_weightController.text);
     if (weight == null) {
-      // This should ideally not happen due to the validator, but it's a good safety check
-      print("Could not parse weight string to double. Aborting.");
       setState(() { _isSaving = false; });
       return;
     }
-    print("Successfully parsed weight: $weight");
-
-    final apiService = locator<ApiService>();
-    final dashboardProvider = context.read<DashboardProvider>();
-    final userProfileProvider = context.read<UserProfileProvider>();
-
+    
+    final weightProvider = context.read<WeightLogProvider>();
     try {
-      // 2. Call the API to save the weight
-      print("Calling apiService.logWeight...");
-      final newLog = await apiService.logWeight(weight);
-      print("apiService.logWeight call completed.");
-
+      final newLog = await locator<ApiService>().logWeight(weight);
       if (newLog != null && mounted) {
-        // 3. Optimistically update the dashboard state
-        print("Log successful. Updating providers and UI.");
-        dashboardProvider.logNewWeight(newLog);
+        context.read<DashboardProvider>().logNewWeight(newLog);
+        await context.read<UserProfileProvider>().fetchUserProfile();
         
-        // 4. Check for XP award
-        // The backend handles the logic, but we need to update the UI
-        // A more advanced system would have the backend response tell us if XP was awarded.
-        // For now, we assume the backend is correct and re-fetch the user profile.
-        print("Fetching updated user profile for XP...");
-        await userProfileProvider.fetchUserProfile();
-        print("User profile fetch complete.");
+        // After saving, refresh the chart data
+        await weightProvider.fetchChartData(period: weightProvider.selectedPeriod);
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Weight logged successfully!'), backgroundColor: Colors.green),
-        );
-        Navigator.of(context).pop();
-        print("Navigation complete.");
-
-      } else {
-        // This 'else' block will catch cases where the API returns a non-201 status but doesn't throw an exception.
-        print("API call returned null or widget is unmounted. Failed to save log.");
-        throw Exception("Failed to save log. API returned an unexpected response.");
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Weight logged!'), backgroundColor: Colors.green));
+        _weightController.clear(); // Clear input after successful save
       }
     } catch (e) {
-      print("--- ERROR CAUGHT ---");
-      print("Error object type: ${e.runtimeType}");
-      print("Error message: ${e.toString()}");
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
-        );
-      }
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red));
     } finally {
-      print("--- Finally Block Reached ---");
-      if(mounted) {
-        print("Widget is mounted. Setting 'isSaving = false'.");
-        setState(() { _isSaving = false; });
-      } else {
-        print("Widget is unmounted. Not setting state.");
-      }
+      if(mounted) setState(() { _isSaving = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Log Weight"),
-        actions: [
-          if (_isSaving)
-            const Padding(padding: EdgeInsets.all(16.0), child: CircularProgressIndicator(color: Colors.white))
-          else
-            IconButton(icon: const Icon(Icons.check), onPressed: _saveWeight)
-        ],
-      ),
-      body: Padding(
+      appBar: AppBar(title: const Text("Log Weight")),
+      body: ListView( // Use ListView to accommodate the form and the chart
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _weightController,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: "Current Weight (kg)",
-                  border: OutlineInputBorder(),
-                  suffixText: "kg",
+        children: [
+          // --- Input Form Section ---
+          Form(
+            key: _formKey,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _weightController,
+                    autofocus: true,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: "Current Weight (kg)", border: OutlineInputBorder()),
+                    validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null || double.parse(v) <= 0) ? 'Enter a valid weight' : null,
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your weight';
-                  }
-                  if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                    return 'Please enter a valid positive number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              // We can add a historical chart here later
-            ],
+                const SizedBox(width: 16),
+                _isSaving
+                    ? const CircularProgressIndicator()
+                    : ElevatedButton(
+                        onPressed: _saveWeight,
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.all(16)),
+                        child: const Text("Save"),
+                      ),
+              ],
+            ),
           ),
-        ),
+          const Divider(height: 48),
+
+          // --- Chart Section ---
+          const Text("Weight History", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Consumer<WeightLogProvider>(
+            builder: (context, provider, child) {
+              return Column(
+                children: [
+                  // Toggle Buttons for 7D/30D
+                  ToggleButtons(
+                    isSelected: [
+                      provider.selectedPeriod == ChartPeriod.sevenDays,
+                      provider.selectedPeriod == ChartPeriod.thirtyDays,
+                    ],
+                    onPressed: (index) {
+                      final period = index == 0 ? ChartPeriod.sevenDays : ChartPeriod.thirtyDays;
+                      provider.fetchChartData(period: period);
+                    },
+                    children: const [Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("7 Days")), Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text("30 Days"))],
+                  ),
+                  const SizedBox(height: 24),
+                  // The Chart
+                  provider.isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : provider.chartData.isEmpty
+                          ? const Center(child: Text("Not enough data to display a chart."))
+                          : SizedBox(height: 200, child: _WeightChart(data: provider.chartData)),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
+}
+
+// --- A dedicated widget for the FL Chart ---
+class _WeightChart extends StatelessWidget {
+  final List<ChartDataPoint> data;
+  const _WeightChart({Key? key, required this.data}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Find min and max values for the y-axis
+    final minY = data.map((d) => d.value).reduce((a, b) => a < b ? a : b) - 2;
+    final maxY = data.map((d) => d.value).reduce((a, b) => a > b ? a : b) + 2;
+
+    return LineChart(
+      LineChartData(
+        minY: minY,
+        maxY: maxY,
+        gridData: FlGridData(show: true),
+        borderData: FlBorderData(show: true),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(sideTitles: _bottomTitles),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        ),
+        lineBarsData: [
+          LineChartBarData(
+            spots: data.map((point) => FlSpot(point.date.millisecondsSinceEpoch.toDouble(), point.value)).toList(),
+            isCurved: true,
+            color: Colors.green,
+            barWidth: 4,
+            belowBarData: BarAreaData(show: true, color: Colors.green.withOpacity(0.2)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  SideTitles get _bottomTitles => SideTitles(
+    showTitles: true,
+    getTitlesWidget: (value, meta) {
+      final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+      return Text(DateFormat('d MMM').format(date)); // Format as "15 Jul"
+    },
+  );
 }

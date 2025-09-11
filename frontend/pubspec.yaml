@@ -44,6 +44,7 @@ dependencies:
   sleek_circular_slider: ^2.1.0
   collection: ^1.19.1
   get_it: ^8.2.0
+  fl_chart: ^0.68.0
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +56,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+dependency_overrides:
+  vector_math: ^2.1.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

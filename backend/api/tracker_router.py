@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from supabase import Client
 from datetime import datetime, timedelta
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 import httpx
 
 from dependencies import get_supabase_client
@@ -64,6 +64,15 @@ class FoodLogResponse(BaseModel):
     macros: Optional[Dict[str, float]] = None
     micros: Optional[Dict[str, float]] = None
     created_at: datetime
+    
+class NutrientBreakdownResponse(BaseModel):
+    total_calories: float
+    macros: Dict[str, float]
+    micros: Dict[str, float]
+    
+class ChartDataPoint(BaseModel):
+    log_date: datetime
+    avg_weight: float
 
 # --- Helper Function for XP ---
 async def award_xp(user_id: str, amount: int, event_name: str):
@@ -203,3 +212,29 @@ async def get_todays_food(user_id: str, supabase: Client = Depends(get_supabase_
 async def get_weight_history(user_id: str, supabase: Client = Depends(get_supabase_client)):
     res = supabase.table("weight_logs").select("*").eq("user_id", user_id).order("created_at", desc=True).limit(100).execute()
     return res.data
+
+@router.get("/trackers/calories/daily-breakdown/{user_id}", response_model=NutrientBreakdownResponse)
+async def get_daily_nutrient_breakdown(user_id: str, supabase: Client = Depends(get_supabase_client)):
+    try:
+        res = supabase.rpc("get_daily_nutrient_breakdown", {"user_uuid": user_id}).execute()
+        if not res.data:
+            # Return a default empty state if the function returns nothing
+            return NutrientBreakdownResponse(total_calories=0, macros={}, micros={})
+        return res.data
+    except Exception as e:
+        print(f"Error fetching nutrient breakdown: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch nutrient breakdown.")
+    
+@router.get("/trackers/weight/chart-history", response_model=List[ChartDataPoint])
+async def get_weight_chart_history(
+    user_id: str,
+    period_days: int = 7, # Default to 7 days, but allow client to request more
+    supabase: Client = Depends(get_supabase_client)
+):
+    try:
+        params = {"user_uuid": user_id, "days_ago": period_days}
+        res = supabase.rpc("get_weight_history_for_chart", params).execute()
+        return res.data
+    except Exception as e:
+        print(f"Error fetching weight chart history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch chart history.")

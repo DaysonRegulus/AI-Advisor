@@ -6,6 +6,8 @@ import '../providers/daily_summary_provider.dart';
 import '../providers/journal_provider.dart';
 import '../providers/goal_provider.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/food_timeline_provider.dart';
+import '../providers/refresh_provider.dart'; 
 import 'home_screen.dart';
 import 'chats_screen.dart';
 import 'journal_list_screen.dart';
@@ -59,6 +61,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       context.read<JournalProvider>().fetchInitialTimeline(), // Fetch the journal entries and comments
       context.read<GoalProvider>().fetchGoals(),
       context.read<DashboardProvider>().fetchDashboardData(),
+      context.read<FoodTimelineProvider>().fetchTodaysFoodLog(),
       // When we add a ChatProvider or JournalProvider, we will add their fetch methods here too.
       // e.g., context.read<ChatProvider>().fetchRecentChats(),
     ]);
@@ -88,6 +91,7 @@ class _MainScaffoldState extends State<MainScaffold> {
     // This is where we trigger the initial data fetch for the app!
     // We use addPostFrameCallback to ensure the Provider is available when we call it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RefreshProvider>().setRefreshFunction(_refreshAllData);
       _refreshAllData();
     });
   }

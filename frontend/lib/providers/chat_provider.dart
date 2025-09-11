@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 import '../api/api_exception.dart';
-import '../screens/agent_chat_screen.dart'; // We'll need the ChatMessage model from here
+import '../screens/agent_chat_screen.dart';
+import '../locator.dart';
 
 class ChatProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
   final String agentName;
 
   ChatProvider({required this.agentName}) {

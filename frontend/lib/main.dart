@@ -7,9 +7,13 @@ import 'providers/daily_summary_provider.dart';
 import 'providers/journal_provider.dart';
 import 'providers/goal_provider.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/food_timeline_provider.dart';
+import 'providers/refresh_provider.dart';
 import 'screens/main_scaffold.dart';
+import 'locator.dart';
 
 void main() {
+  setupLocator();
   runApp(const MyApp());
 }
 
@@ -26,11 +30,13 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => JournalProvider()),
         ChangeNotifierProvider(create: (context) => GoalProvider()),
         ChangeNotifierProvider(create: (context) => DashboardProvider()),
+        ChangeNotifierProvider(create: (context) => FoodTimelineProvider()),
+        ChangeNotifierProvider(create: (context) => RefreshProvider()),
       ],
       child: MaterialApp(
         title: 'Personal AI Advisor',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
+          primarySwatch: Colors.green,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
         home: const MainScaffold(),

@@ -1,0 +1,54 @@
+# PynSource Version 1.2
+{'type':'meta', 'info1':'Lorem ipsum dolor sit amet, consectetur adipiscing elit is latin. Comments are saved.'}
+{'type':'umlshape', 'id':'AIInteractionRequest', 'x':1248, 'y':370, 'width':210, 'height':96, 'attrs': 'agent_name|message|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'AIInteractionResponse', 'x':197, 'y':727, 'width':220, 'height':96, 'attrs': 'agent_name|response|timestamp', 'meths': ''}
+{'type':'umlshape', 'id':'AgentTimelineItem', 'x':322, 'y':187, 'width':180, 'height':160, 'attrs': 'ai_response|created_at|entry_id|item_id|item_type|journal_content|user_message', 'meths': ''}
+{'type':'umlshape', 'id':'BaseModel', 'x':382, 'y':1071, 'width':100, 'height':28, 'attrs': '', 'meths': ''}
+{'type':'umlshape', 'id':'UnknownType', 'x':38, 'y':253, 'width':120, 'height':28, 'attrs': '', 'meths': ''}
+{'type':'umlshape', 'id':'JournalEntryRequest', 'x':723, 'y':720, 'width':200, 'height':80, 'attrs': 'content|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'JournalEntryResponse', 'x':727, 'y':361, 'width':210, 'height':112, 'attrs': 'content|created_at|id|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'AIComment', 'x':474, 'y':556, 'width':106, 'height':112, 'attrs': 'agent_name|comment_text|created_at|entry_id', 'meths': ''}
+{'type':'umlshape', 'id':'TimelineItem', 'x':1248, 'y':47, 'width':130, 'height':144, 'attrs': 'agent_name|content|created_at|entry_id|item_id|item_type', 'meths': ''}
+{'type':'umlshape', 'id':'SummaryRequest', 'x':205, 'y':1056, 'width':150, 'height':64, 'attrs': 'user_id', 'meths': ''}
+{'type':'umlshape', 'id':'LogWeightRequest', 'x':684, 'y':1008, 'width':170, 'height':80, 'attrs': 'user_id|weight_kg', 'meths': ''}
+{'type':'umlshape', 'id':'LogWaterRequest', 'x':159, 'y':1147, 'width':160, 'height':80, 'attrs': 'amount_ml|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'LogFoodRequest', 'x':1231, 'y':664, 'width':150, 'height':160, 'attrs': 'calories|food_name|macros|meal_type|micros|serving_size|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'WeightLogResponse', 'x':990, 'y':1314, 'width':180, 'height':112, 'attrs': 'created_at|id|user_id|weight_kg', 'meths': ''}
+{'type':'umlshape', 'id':'WaterLogResponse', 'x':990, 'y':1635, 'width':170, 'height':112, 'attrs': 'amount_ml|created_at|id|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'DashboardData', 'x':343, 'y':1386, 'width':178, 'height':96, 'attrs': 'latest_weight_log|todays_calorie_intake|todays_water_intake', 'meths': ''}
+{'type':'umlshape', 'id':'UserGoals', 'x':1608, 'y':82, 'width':162, 'height':128, 'attrs': 'daily_calorie_goal|daily_water_goal_ml|user_id|weight_goal_kg|weight_goal_type', 'meths': ''}
+{'type':'umlshape', 'id':'FoodLogResponse', 'x':1001, 'y':1120, 'width':160, 'height':192, 'attrs': 'calories|created_at|food_name|id|macros|meal_type|micros|serving_size|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'datetime', 'x':1225, 'y':1234, 'width':90, 'height':28, 'attrs': '', 'meths': ''}
+{'type':'umlshape', 'id':'AwardXpRequest', 'x':1518, 'y':1087, 'width':150, 'height':96, 'attrs': 'amount|event_name|user_id', 'meths': ''}
+{'type':'umlshape', 'id':'UserProfileResponse', 'x':1768, 'y':373, 'width':200, 'height':144, 'attrs': 'level|leveled_up|user_id|username|xp_points|xp_to_next_level', 'meths': ''}
+{'type':'umlshape', 'id':'Settings', 'x':448, 'y':28, 'width':170, 'height':112, 'attrs': 'GEMINI_API_KEY|SUPABASE_SERVICE_KEY|SUPABASE_URL|model_config', 'meths': ''}
+{'type':'umlshape', 'id':'BaseSettings', 'x':240, 'y':61, 'width':130, 'height':28, 'attrs': '', 'meths': ''}
+{'type':'umlshape', 'id':'ConnectionManager', 'x':10, 'y':874, 'width':180, 'height':138, 'attrs': 'active_connections', 'meths': '__init__|connect|disconnect|send_personal_message'}
+{'type':'umlshape', 'id':'WebSocket', 'x':46, 'y':1042, 'width':100, 'height':28, 'attrs': '', 'meths': ''}
+{'type':'edge', 'id':'AgentTimelineItem_to_BaseModel', 'source':'AgentTimelineItem', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'AIInteractionRequest_to_BaseModel', 'source':'AIInteractionRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'AIInteractionResponse_to_BaseModel', 'source':'AIInteractionResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'UnknownType_to_AIInteractionResponse', 'source':'UnknownType', 'target':'AIInteractionResponse', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'UnknownType_to_AgentTimelineItem', 'source':'UnknownType', 'target':'AgentTimelineItem', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'JournalEntryResponse_to_BaseModel', 'source':'JournalEntryResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'JournalEntryRequest_to_BaseModel', 'source':'JournalEntryRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'AIComment_to_BaseModel', 'source':'AIComment', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'TimelineItem_to_BaseModel', 'source':'TimelineItem', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'SummaryRequest_to_BaseModel', 'source':'SummaryRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'DashboardData_to_BaseModel', 'source':'DashboardData', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'FoodLogResponse_to_BaseModel', 'source':'FoodLogResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'UserGoals_to_BaseModel', 'source':'UserGoals', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'LogWeightRequest_to_BaseModel', 'source':'LogWeightRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'WaterLogResponse_to_BaseModel', 'source':'WaterLogResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'LogFoodRequest_to_BaseModel', 'source':'LogFoodRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'LogWaterRequest_to_BaseModel', 'source':'LogWaterRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'WeightLogResponse_to_BaseModel', 'source':'WeightLogResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'WeightLogResponse_to_DashboardData', 'source':'WeightLogResponse', 'target':'DashboardData', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'datetime_to_FoodLogResponse', 'source':'datetime', 'target':'FoodLogResponse', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'datetime_to_WaterLogResponse', 'source':'datetime', 'target':'WaterLogResponse', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'datetime_to_WeightLogResponse', 'source':'datetime', 'target':'WeightLogResponse', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'UserProfileResponse_to_BaseModel', 'source':'UserProfileResponse', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'AwardXpRequest_to_BaseModel', 'source':'AwardXpRequest', 'target':'BaseModel', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'Settings_to_BaseSettings', 'source':'Settings', 'target':'BaseSettings', 'uml_edge_type': 'generalisation'}
+{'type':'edge', 'id':'WebSocket_to_ConnectionManager', 'source':'WebSocket', 'target':'ConnectionManager', 'uml_edge_type': 'composition'}
+{'type':'edge', 'id':'UnknownType_to_ConnectionManager', 'source':'UnknownType', 'target':'ConnectionManager', 'uml_edge_type': 'composition'}

@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import '../models/user_goals.dart';
 import '../api/api_service.dart';
+import '../locator.dart';
 
 class GoalProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
   UserGoals? _userGoals;
   bool _isLoading = false;
 

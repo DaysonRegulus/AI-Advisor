@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/goal_provider.dart';
+import '../screens/trackers/weight_log_screen.dart';
 
 class WeightTrackerCard extends StatelessWidget {
   const WeightTrackerCard({Key? key}) : super(key: key);
@@ -82,7 +83,10 @@ class WeightTrackerCard extends StatelessWidget {
       elevation: 4,
       child: InkWell( // Make the whole card tappable
         onTap: () {
-          // TODO: Navigate to the dedicated WeightScreen
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WeightLogScreen()),
+          );
           print("Navigate to Weight Screen");
         },
         child: Container(

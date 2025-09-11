@@ -9,9 +9,11 @@ import '../models/loading_indicator_item.dart';
 import '../models/ai_comment.dart';
 import '../api/api_service.dart';
 import '../config.dart';
+import '../locator.dart';
 
 class JournalProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
   List<JournalTimelineItem> _timelineItems = [];
   bool _isLoading = false;
   String? _error;

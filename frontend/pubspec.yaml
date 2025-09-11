@@ -42,6 +42,8 @@ dependencies:
   animated_text_kit: ^4.2.3
   web_socket_channel: ^3.0.3
   sleek_circular_slider: ^2.1.0
+  collection: ^1.19.1
+  get_it: ^8.2.0
 
 dev_dependencies:
   flutter_test:

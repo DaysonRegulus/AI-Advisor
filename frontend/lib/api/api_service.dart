@@ -52,6 +52,43 @@ class ApiService {
 
   // --- Implementation of the new methods ---
 
+  Future<FoodLog?> logFood({
+    required String foodName,
+    required String mealType,
+    required double calories,
+    String? servingSize,
+    Map<String, double>? macros,
+    Map<String, double>? micros,
+  }) async {
+    final url = Uri.parse('$_baseUrl/trackers/log-food');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': _testUserId,
+          'food_name': foodName,
+          'meal_type': mealType,
+          'serving_size': servingSize,
+          'calories': calories,
+          'macros': macros,
+          'micros': micros,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        return FoodLog.fromJson(jsonDecode(response.body));
+      } else {
+        // Try to parse a more specific error message from the backend
+        final errorData = jsonDecode(response.body);
+        throw ApiException(errorData['detail'] ?? 'Failed to save food log.');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow; // Don't re-wrap our custom exceptions
+      throw ApiException('Could not connect to the server to save food log.');
+    }
+  }
+
   Future<UserGoals?> getUserGoals() async {
     final url = Uri.parse('$_baseUrl/trackers/goals/$_testUserId');
     try {

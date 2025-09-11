@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 import '../models/weight_log.dart';
+import '../locator.dart';
 
 class DashboardProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
   
   int _todaysWaterIntake = 0;
   int _todaysCalorieIntake = 0;

@@ -3,7 +3,8 @@
 import 'package:flutter/material.dart';
 import '../api/api_exception.dart';
 import '../models/daily_summary.dart';
-import '../api/api_service.dart'; // We will add a method to this service next
+import '../api/api_service.dart'; 
+import '../locator.dart';
 
 class DailySummaryProvider with ChangeNotifier {
   DailySummary? _summary;
@@ -15,7 +16,8 @@ class DailySummaryProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
 
   Future<void> fetchLatestSummary() async {
     _isLoading = true;

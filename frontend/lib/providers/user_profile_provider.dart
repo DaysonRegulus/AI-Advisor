@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../api/api_exception.dart' ;
 import '../models/user_profile.dart';
 import '../api/api_service.dart';
+import '../locator.dart';
 
 // This class 'mixes in' ChangeNotifier, which gives it the ability
 // to notify its listeners (our UI widgets) of any changes.
@@ -11,7 +12,8 @@ class UserProfileProvider with ChangeNotifier {
   String? _error;
   String? get error => _error;
   UserProfile? _userProfile;
-  final ApiService _apiService = ApiService();
+  // Get the ApiService instance from the locator.
+  final ApiService _apiService = locator<ApiService>();
   // Add a new state variable to track if the initial fetch is done.
   bool _isInitialFetchDone = false;
 

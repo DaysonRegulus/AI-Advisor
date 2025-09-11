@@ -53,6 +53,17 @@ class UserGoals(BaseModel):
     daily_calorie_goal: Optional[int] = None
     weight_goal_kg: Optional[float] = None
     weight_goal_type: Optional[str] = None
+    
+class FoodLogResponse(BaseModel):
+    id: str
+    user_id: str
+    food_name: str
+    meal_type: str
+    serving_size: Optional[str] = None
+    calories: float
+    macros: Optional[Dict[str, float]] = None
+    micros: Optional[Dict[str, float]] = None
+    created_at: datetime
 
 # --- Helper Function for XP ---
 async def award_xp(user_id: str, amount: int, event_name: str):
@@ -132,9 +143,10 @@ async def log_water(request: LogWaterRequest, supabase: Client = Depends(get_sup
     # 4. Return the primary created object
     return new_water_log
 
-@router.post("/trackers/log-food", status_code=status.HTTP_201_CREATED)
+@router.post("/trackers/log-food", response_model=FoodLogResponse, status_code=status.HTTP_201_CREATED)
 async def log_food(request: LogFoodRequest, supabase: Client = Depends(get_supabase_client)):
-    supabase.table("food_logs").insert({
+    # 1. Insert the new food log
+    insert_res = supabase.table("food_logs").insert({
         "user_id": request.user_id,
         "food_name": request.food_name,
         "meal_type": request.meal_type,
@@ -143,6 +155,11 @@ async def log_food(request: LogFoodRequest, supabase: Client = Depends(get_supab
         "macros": request.macros,
         "micros": request.micros # Pydantic ensures this is a dict or None
     }).execute()
+
+    if not insert_res.data:
+        raise HTTPException(status_code=500, detail="Failed to save food log.")
+    
+    new_log = insert_res.data[0]
     
     # Check if this is the first entry for this meal_type today to award XP
     start_of_day = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
@@ -155,7 +172,7 @@ async def log_food(request: LogFoodRequest, supabase: Client = Depends(get_supab
     if meal_logs_today.count == 1:
         await award_xp(request.user_id, 25, f"{request.meal_type.lower()}_log")
 
-    return {"status": "success", "message": f"{request.meal_type} logged."}
+    return new_log
 
 @router.post("/trackers/goals", response_model=UserGoals)
 async def set_user_goals(goals: UserGoals, supabase: Client = Depends(get_supabase_client)):

@@ -12,7 +12,7 @@ from core.personas import EXPERT_PERSONAS
 from dependencies import get_supabase_client
 
 # Import our routers
-from api import ai_router, user_router, overseer_router, journal_router, tracker_router
+from api import ai_router, user_router, overseer_router, journal_router, tracker_router, auth_router
 
 app = FastAPI(
     title="Personal AI Advisor API",
@@ -42,6 +42,7 @@ app.include_router(user_router.router, prefix="/api", tags=["User Profile"])
 app.include_router(overseer_router.router, prefix="/api", tags=["Overseer"]) 
 app.include_router(journal_router.router, prefix="/api", tags=["Journal"])
 app.include_router(tracker_router.router, prefix="/api", tags=["Trackers"])
+app.include_router(auth_router.router, prefix="/api", tags=["Authentication"])
 
 # --- WEBSOCKET ENDPOINT ---
 @app.websocket("/ws/comments/{user_id}")

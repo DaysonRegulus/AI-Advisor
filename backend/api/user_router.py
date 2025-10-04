@@ -6,23 +6,21 @@ from supabase import Client
 from typing import Optional
 
 # Our project imports
-from dependencies import get_supabase_client
+from dependencies import get_supabase_client, get_current_user
 
 router = APIRouter()
 
 # --- Helper Function for XP Calculation ---
 def calculate_next_level_xp(level: int) -> int:
-    """
-    Calculates the XP required to reach the next level.
-    Uses a simple exponential growth formula.
-    """
     return int(100 * (level ** 1.5))
 
 # --- Pydantic Models ---
 class AwardXpRequest(BaseModel):
+    # We keep user_id here for now because we call this function internally.
+    # We will refactor this in Step 13.
     user_id: str
-    amount: int = Field(..., gt=0, description="Amount of XP to award. Must be positive.")
-    event_name: str # e.g., "journal_completed", "first_fitness_log" for future analytics
+    amount: int = Field(..., gt=0)
+    event_name: str
 
 class UserProfileResponse(BaseModel):
     user_id: str
@@ -37,24 +35,15 @@ class UserProfileResponse(BaseModel):
     "/user/award-xp",
     response_model=UserProfileResponse,
     summary="Award Experience Points to a User",
-    description="Awards a specified amount of XP to a user and handles level-up logic."
+    # This endpoint is now for INTERNAL use only, called by other services.
+    # It is NOT protected by get_current_user because it's not a direct client endpoint.
 )
 def award_xp(
     request: AwardXpRequest,
     supabase: Client = Depends(get_supabase_client)
 ):
-    """
-    Handles the logic for awarding XP and leveling up a user.
-    1. Fetches the user's current profile.
-    2. Calculates the new XP total and checks for level-ups.
-    3. Updates the profile in the database with the new values.
-    """
     try:
-        # 1. --- Fetch current user profile ---
-        print(f"Fetching profile for user: {request.user_id}")
         profile_res = supabase.table("user_profiles").select("*").eq("id", request.user_id).single().execute()
-        
-        # .single() ensures we get exactly one record or it raises an error.
         if not profile_res.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -62,9 +51,6 @@ def award_xp(
             )
         
         profile = profile_res.data
-        print(f"Current profile: Level {profile['level']}, XP {profile['xp_points']}/{profile['xp_to_next_level']}")
-
-        # 2. --- Calculate new XP and handle level-ups ---
         leveled_up = False
         new_xp = profile['xp_points'] + request.amount
         current_level = profile['level']
@@ -73,12 +59,9 @@ def award_xp(
         while new_xp >= xp_for_next:
             leveled_up = True
             current_level += 1
-            new_xp -= xp_for_next  # Carry over the remainder XP
+            new_xp -= xp_for_next
             xp_for_next = calculate_next_level_xp(current_level)
-            print(f"LEVEL UP! User is now Level {current_level}. Next level at {xp_for_next} XP.")
-
-        # 3. --- Update the profile in the database ---
-        print(f"Updating profile: Level {current_level}, XP {new_xp}/{xp_for_next}")
+        
         update_response = supabase.table("user_profiles").update({
             "level": current_level,
             "xp_points": new_xp,
@@ -91,7 +74,6 @@ def award_xp(
                 detail="Failed to update user profile in the database."
             )
 
-        # 4. --- Return the updated profile ---
         return UserProfileResponse(
             user_id=profile['id'],
             username=profile.get('username'),
@@ -100,54 +82,45 @@ def award_xp(
             xp_to_next_level=xp_for_next,
             leveled_up=leveled_up
         )
-
     except Exception as e:
-        # Catch potential errors from .single() or other database issues
-        print(f"ERROR awarding XP: {e}")
-        # Re-raise as an HTTPException to provide a clean error response to the client.
-        if isinstance(e, HTTPException):
-            raise e
+        if isinstance(e, HTTPException): raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while awarding XP: {str(e)}"
         )
+        
 @router.get(
-    "/user/profile/{user_id}",
-    response_model=UserProfileResponse, # Reuse our existing response model
-    summary="Get User Profile",
-    description="Fetches the complete profile for a given user, including level and XP."
+    "/user/profile", # Removed {user_id} from path
+    response_model=UserProfileResponse,
+    summary="Get Current User's Profile"
 )
-def get_user_profile(user_id: str, supabase: Client = Depends(get_supabase_client)):
+def get_user_profile(
+    current_user = Depends(get_current_user), # <-- PROTECTED
+    supabase: Client = Depends(get_supabase_client)
+):
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
         profile_res = supabase.table("user_profiles").select("*").eq("id", user_id).single().execute()
         profile = profile_res.data
         
-        # We need to add 'leveled_up' to the response, which is not in the DB.
-        # We can just set it to false for a GET request.
         response_data = {
-        "user_id": profile['id'],  # <-- THE MAIN FIX: Map 'id' to 'user_id'
-        "username": profile.get('username'),
-        "level": profile['level'],
-        "xp_points": profile['xp_points'],
-        "xp_to_next_level": profile['xp_to_next_level'],
-        "leveled_up": False
+            "user_id": profile['id'],
+            "username": profile.get('username'),
+            "level": profile['level'],
+            "xp_points": profile['xp_points'],
+            "xp_to_next_level": profile['xp_to_next_level'],
+            "leveled_up": False
         }
 
         return response_data
     except Exception as e:
-        # This is a general catch-all, but the .single() error is the most common.
-        # Postgrest errors often don't have a specific Python exception type from the client library,
-        # so checking the string content can be a necessary evil.
         error_message = str(e)
         print(f"Error fetching profile for user {user_id}: {error_message}")
-
         if "JSON object requested, multiple (or no) rows returned" in error_message:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"error": f"User profile for user_id '{user_id}' not found."}
             )
-        
-        # For any other unexpected errors, return a 500
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": "An unexpected server error occurred."}

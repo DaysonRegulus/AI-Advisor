@@ -1,53 +1,44 @@
 # api/overseer_router.py
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from supabase import Client
 import datetime
 
 # Our project imports
-from dependencies import get_supabase_client
+from dependencies import get_supabase_client, get_current_user
 from services.memory_service import construct_memory_stream
 from services.gemini_service import get_ai_response
 from core.personas import EXPERT_PERSONAS
 
 router = APIRouter()
 
-# --- Pydantic Models ---
-class SummaryRequest(BaseModel):
-    user_id: str
-
-# --- The Endpoint ---
 @router.post(
     "/overseer/generate-summary",
-    summary="Generate and Save a Daily Summary",
-    description="Triggers the Master Overseer to analyze the user's recent activity and save a summary."
+    summary="Generate and Save a Daily Summary"
 )
 def trigger_summary_generation(
-    request: SummaryRequest,
+    current_user = Depends(get_current_user), # <-- PROTECTED
     supabase: Client = Depends(get_supabase_client)
 ):
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     today = datetime.datetime.utcnow().date()
     agent_name = "master_overseer"
 
-    print(f"--- Triggering Daily Summary Generation for user: {request.user_id} ---")
+    print(f"--- Triggering Daily Summary Generation for user: {user_id} ---")
 
-    # 1. Construct the complete memory stream for the Overseer
-    overseer_memory = construct_memory_stream(request.user_id, agent_name, supabase)
+    overseer_memory = construct_memory_stream(user_id, agent_name, supabase)
 
-    # 2. Define the task prompt for today's summary
     summary_task_prompt = """
     Analyze all the provided context (your past summaries, user journals, and all agent conversations) and generate a new, concise, one-paragraph daily summary for today. 
     Focus on the user's emotional state, key accomplishments, and any emerging patterns or conflicts between different life domains. 
     Your tone should be insightful, encouraging, and forward-looking.
     """
 
-    # 3. Call the central Gemini service
     summary_text = get_ai_response(
         persona_prompt=EXPERT_PERSONAS[agent_name],
         user_message=summary_task_prompt,
         chat_history=overseer_memory,
-        user_id_for_debug=request.user_id,
+        user_id_for_debug=user_id,
         agent_name_for_debug=agent_name
     )
 
@@ -56,18 +47,16 @@ def trigger_summary_generation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="The AI service failed to generate a summary."
         )
-
-    # 4. Save the new summary to the database (This part now uses your existing, correct logic)
     try:
         supabase.table("daily_summaries").upsert(
             {
-                "user_id": request.user_id,
+                "user_id": user_id,
                 "summary_text": summary_text,
                 "date": str(today)
             },
-            on_conflict="user_id,date"  # Preserving your important fix
+            on_conflict="user_id,date"
         ).execute()
-        print(f"Successfully saved daily summary for user {request.user_id} on {today}")
+        print(f"Successfully saved daily summary for user {user_id} on {today}")
 
     except Exception as e:
         print(f"CRITICAL ERROR: Failed to save daily summary to database. Error: {e}")
@@ -79,11 +68,14 @@ def trigger_summary_generation(
     return {"status": "success", "message": "Daily summary generated and saved."}
 
 @router.get(
-    "/overseer/latest-summary/{user_id}",
-    summary="Fetch Latest Daily Summary",
-    description="Retrieves the most recent daily summary for a given user."
+    "/overseer/latest-summary", # Removed {user_id} from path
+    summary="Fetch Latest Daily Summary"
 )
-def get_latest_summary(user_id: str, supabase: Client = Depends(get_supabase_client)):
+def get_latest_summary(
+    current_user = Depends(get_current_user), # <-- PROTECTED
+    supabase: Client = Depends(get_supabase_client)
+):
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
         res = supabase.table("daily_summaries") \
             .select("*") \
@@ -94,7 +86,6 @@ def get_latest_summary(user_id: str, supabase: Client = Depends(get_supabase_cli
             .execute()
         return res.data
     except Exception as e:
-        # .single() will throw an error if no row is found, which is expected.
         print(f"No summary found for user {user_id}. Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

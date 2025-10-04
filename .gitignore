@@ -11,3 +11,4 @@ frontend/build/
 frontend/.packages
 frontend/lib/config.dart
 .env
+.vscode/

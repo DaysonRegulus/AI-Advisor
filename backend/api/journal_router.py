@@ -5,11 +5,10 @@ from core.connection_manager import manager as ws_manager
 from pydantic import BaseModel
 from supabase import Client
 import asyncio
-import json
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 # Our project imports
-from dependencies import get_supabase_client
+from dependencies import get_supabase_client, get_current_user
 from services.gemini_service import get_ai_response
 from services.memory_service import construct_memory_stream
 from core.personas import EXPERT_PERSONAS
@@ -18,7 +17,7 @@ router = APIRouter()
 
 # --- Data Models ---
 class JournalEntryRequest(BaseModel):
-    user_id: str
+    # user_id is REMOVED
     content: str
 
 class JournalEntryResponse(BaseModel):
@@ -41,12 +40,9 @@ class TimelineItem(BaseModel):
     agent_name: Optional[str] = None
     entry_id: Optional[str] = None
 
-# --- Background Task for Generating Comments ---
-
+# --- Background Task for Generating Comments (this function remains the same) ---
 async def generate_and_save_comments(entry_id: str, entry_content: str, user_id: str, supabase: Client):
-    """
-    This function runs in the background. It gets comments from all agents and saves them.
-    """
+    # ... (no changes to the inside of this function)
     print(f"BACKGROUND TASK: Started comment generation for entry_id: {entry_id}")
 
     # The prompt for the comment generation
@@ -106,8 +102,9 @@ async def generate_and_save_comments(entry_id: str, entry_content: str, user_id:
 
     print(f"BACKGROUND TASK: Finished comment generation for entry {entry_id}.")
 
+
 async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, supabase: Client) -> str:
-    """Helper coroutine that runs blocking AI calls in a separate thread."""
+    # ... (no changes to the inside of this function)
     def blocking_ai_call():
         # This inner function contains all the synchronous code
         persona = EXPERT_PERSONAS[agent_name]
@@ -118,7 +115,7 @@ async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, s
             user_message=prompt,
             chat_history=memory,
             user_id_for_debug=user_id,
-            agent_name_for_debug=f"{agent_name}_journal_comment" # Make debug name specific
+            agent_name_for_debug=f"{agent_name}_journal_comment"
         )
         return response
 
@@ -128,19 +125,17 @@ async def get_single_agent_comment(agent_name: str, prompt: str, user_id: str, s
     return response_text
 
 # --- API Endpoints ---
-
 @router.post("/journal/add", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
 async def add_journal_entry(
     request: JournalEntryRequest,
     background_tasks: BackgroundTasks,
+    current_user = Depends(get_current_user), # <-- PROTECTED
     supabase: Client = Depends(get_supabase_client)
 ):
-    """
-    Saves a journal entry and triggers AI comment generation in the background.
-    """
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
         insert_res = supabase.table("journal_entries").insert({
-            "user_id": request.user_id,
+            "user_id": user_id,
             "content": request.content
         }).execute()
         
@@ -166,15 +161,12 @@ async def add_journal_entry(
     
 @router.get("/journal/timeline", response_model=List[TimelineItem])
 async def get_journal_timeline(
-    user_id: str,
     page: int = 0,
-    page_size: int = 20, # A sensible default page size
+    page_size: int = 20,
+    current_user = Depends(get_current_user), # <-- PROTECTED
     supabase: Client = Depends(get_supabase_client)
 ):
-    """
-    Fetches a paginated, chronologically sorted list of all journal items
-    (entries and comments) by calling a database function.
-    """
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
         params = {"user_uuid": user_id, "page_size": page_size, "page_number": page}
         res = supabase.rpc("get_user_timeline_page", params).execute()

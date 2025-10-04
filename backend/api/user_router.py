@@ -16,9 +16,7 @@ def calculate_next_level_xp(level: int) -> int:
 
 # --- Pydantic Models ---
 class AwardXpRequest(BaseModel):
-    # We keep user_id here for now because we call this function internally.
-    # We will refactor this in Step 13.
-    user_id: str
+    # user_id is REMOVED from the request body
     amount: int = Field(..., gt=0)
     event_name: str
 
@@ -30,24 +28,24 @@ class UserProfileResponse(BaseModel):
     xp_to_next_level: int
     leveled_up: bool
 
-# --- The Main Endpoint ---
 @router.post(
     "/user/award-xp",
     response_model=UserProfileResponse,
-    summary="Award Experience Points to a User",
-    # This endpoint is now for INTERNAL use only, called by other services.
-    # It is NOT protected by get_current_user because it's not a direct client endpoint.
+    summary="Award Experience Points to the Current User"
 )
 def award_xp(
     request: AwardXpRequest,
+    current_user=Depends(get_current_user), # <-- PROTECTED
     supabase: Client = Depends(get_supabase_client)
 ):
+    user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
-        profile_res = supabase.table("user_profiles").select("*").eq("id", request.user_id).single().execute()
+        profile_res = supabase.table("user_profiles").select("*").eq("id", user_id).single().execute()
+        
         if not profile_res.data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User profile not found for user_id: {request.user_id}"
+                detail=f"User profile not found for user_id: {user_id}"
             )
         
         profile = profile_res.data
@@ -90,15 +88,15 @@ def award_xp(
         )
         
 @router.get(
-    "/user/profile", # Removed {user_id} from path
+    "/user/profile",
     response_model=UserProfileResponse,
     summary="Get Current User's Profile"
 )
 def get_user_profile(
-    current_user = Depends(get_current_user), # <-- PROTECTED
+    current_user = Depends(get_current_user),
     supabase: Client = Depends(get_supabase_client)
 ):
-    user_id = current_user.user.id # <-- Get user_id from the validated token
+    user_id = current_user.user.id
     try:
         profile_res = supabase.table("user_profiles").select("*").eq("id", user_id).single().execute()
         profile = profile_res.data
@@ -111,11 +109,9 @@ def get_user_profile(
             "xp_to_next_level": profile['xp_to_next_level'],
             "leveled_up": False
         }
-
         return response_data
     except Exception as e:
         error_message = str(e)
-        print(f"Error fetching profile for user {user_id}: {error_message}")
         if "JSON object requested, multiple (or no) rows returned" in error_message:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

@@ -10,7 +10,8 @@ import 'providers/dashboard_provider.dart';
 import 'providers/food_timeline_provider.dart';
 import 'providers/refresh_provider.dart';
 import 'providers/calorie_provider.dart';
-import 'screens/main_scaffold.dart';
+import 'features/authentication/screens/auth_wrapper.dart';
+import 'features/authentication/providers/auth_provider.dart';
 import 'locator.dart';
 
 void main() {
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
     // We use MultiProvider to provide multiple objects to the widget tree.
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (context) => AuthProvider()),
         ChangeNotifierProvider(create: (context) => UserProfileProvider()),
         ChangeNotifierProvider(create: (context) => DailySummaryProvider()),
         ChangeNotifierProvider(create: (context) => JournalProvider()),
@@ -41,7 +43,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.green,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        home: const MainScaffold(),
+        home: const AuthWrapper(),
       ),
     );
   }

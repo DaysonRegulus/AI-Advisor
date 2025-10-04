@@ -1,65 +1,78 @@
-// lib/features/authentication/screens/login_screen.dart
+// lib/features/authentication/screens/signup_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import 'signup_screen.dart';
+import 'login_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({Key? key}) : super(key: key);
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  /// Calls the AuthProvider to handle the login logic.
-  Future<void> _login() async {
+  /// Calls the AuthProvider to handle the signup logic.
+  Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
-    // Use context.read for one-off function calls inside a method.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.login(_emailController.text, _passwordController.text);
+    await authProvider.signUp(
+      _usernameController.text,
+      _emailController.text,
+      _passwordController.text,
+    );
 
-    // After the await, we can check if there was an error.
-    if (mounted && authProvider.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error!),
-          backgroundColor: Colors.red,
-        ),
-      );
+    if (mounted) {
+      if (authProvider.error != null) {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error!),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else {
+        // Show success message and navigate to login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully! Please log in.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _navigateToLogin();
+      }
     }
-    // No need to navigate here; the AuthWrapper will do it for us.
   }
 
-  void _navigateToSignUp() {
+  void _navigateToLogin() {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Use Consumer to listen for changes in the AuthProvider state.
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Login'),
+            title: const Text('Sign Up'),
           ),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -69,6 +82,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a username';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -95,7 +123,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     obscureText: true,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your password';
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 6) {
+                        return 'Password must be at least 6 characters long';
                       }
                       return null;
                     },
@@ -104,16 +135,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   authProvider.isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
-                          onPressed: _login,
+                          onPressed: _signUp,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                           ),
-                          child: const Text('Login'),
+                          child: const Text('Sign Up'),
                         ),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: _navigateToSignUp,
-                    child: const Text('Don\'t have an account? Sign Up'),
+                    onPressed: _navigateToLogin,
+                    child: const Text('Already have an account? Login'),
                   ),
                 ],
               ),

@@ -13,6 +13,7 @@ import '../widgets/water_tracker_card.dart';
 import '../widgets/weight_tracker_card.dart';
 import '../widgets/calorie_tracker_header.dart'; 
 import '../widgets/food_timeline.dart';
+import '../features/authentication/providers/auth_provider.dart';
 
 class HomeScreen extends StatelessWidget {
   // Add a final variable to hold the function
@@ -53,6 +54,14 @@ class HomeScreen extends StatelessWidget {
             tooltip: 'Award 15 XP',
             onPressed: () {
               Provider.of<UserProfileProvider>(context, listen: false).awardXpForEvent('manual_test_button', 15);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+            onPressed: () {
+              // Call the logout method from our AuthProvider
+              Provider.of<AuthProvider>(context, listen: false).logout();
             },
           ),
         ],

@@ -61,27 +61,8 @@ class AgentTimelineItem {
 class ApiService {
   static const String _baseUrl = '${AppConfig.baseUrl}/api';
 
-  // --- Internal Token Management ---
-  String? _authToken;
-
-  /// Sets the authentication token for all subsequent API calls.
-  void setAuthToken(String? token) {
-    _authToken = token;
-    print("ApiService: Auth token updated.");
-  }
-
-  /// Helper method to create authenticated headers.
-  Map<String, String> _getHeaders() {
-    if (_authToken == null) {
-      // This should ideally not happen if the app logic is correct.
-      // Throws an exception if a protected endpoint is called without a token.
-      throw ApiException('Authentication token not found.');
-    }
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $_authToken',
-    };
-  }
+  final http.Client _client;
+  ApiService(this._client); // Constructor
 
   // --- Authentication Methods (Unprotected) ---
 
@@ -92,7 +73,7 @@ class ApiService {
   }) async {
     final url = Uri.parse('$_baseUrl/auth/signup');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -117,7 +98,7 @@ class ApiService {
   }) async {
     final url = Uri.parse('$_baseUrl/auth/login');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
@@ -146,9 +127,9 @@ class ApiService {
   }) async {
     final url = Uri.parse('$_baseUrl/trackers/log-food');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({
           'food_name': foodName,
           'meal_type': mealType,
@@ -177,7 +158,7 @@ class ApiService {
   Future<UserGoals?> getUserGoals() async {
     final url = Uri.parse('$_baseUrl/trackers/goals');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         return UserGoals.fromJson(jsonDecode(response.body));
       }
@@ -191,7 +172,7 @@ class ApiService {
   Future<DashboardData?> getDashboardData() async {
     final url = Uri.parse('$_baseUrl/trackers/dashboard');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         return DashboardData.fromJson(jsonDecode(response.body));
       }
@@ -204,9 +185,9 @@ class ApiService {
   Future<void> logWater(int amountMl) async {
     final url = Uri.parse('$_baseUrl/trackers/log-water');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({'amount_ml': amountMl}),
       );
       if (response.statusCode != 201) {
@@ -220,9 +201,9 @@ class ApiService {
   Future<WeightLog?> logWeight(double weightKg) async {
     final url = Uri.parse('$_baseUrl/trackers/log-weight');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({'weight_kg': weightKg}),
       );
       if(response.statusCode == 201) {
@@ -236,7 +217,7 @@ class ApiService {
   
   Future<List<WaterLog>> getTodaysWaterLogs() async {
     final url = Uri.parse('$_baseUrl/trackers/water/today');
-    final response = await http.get(url, headers: _getHeaders());
+    final response = await _client.get(url);
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => WaterLog.fromJson(json)).toList();
@@ -247,7 +228,7 @@ class ApiService {
   Future<List<FoodLog>> getTodaysFoodLogs() async {
     final url = Uri.parse('$_baseUrl/trackers/food/today');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => FoodLog.fromJson(json)).toList();
@@ -260,7 +241,7 @@ class ApiService {
   
   Future<List<WeightLog>> getWeightHistory() async {
     final url = Uri.parse('$_baseUrl/trackers/weight/history');
-    final response = await http.get(url, headers: _getHeaders());
+    final response = await _client.get(url);
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((json) => WeightLog.fromJson(json)).toList();
@@ -271,9 +252,9 @@ class ApiService {
   Future<String> interactWithAi(String agentName, String message) async {
     final url = Uri.parse('$_baseUrl/ai/interact');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({
           'agent_name': agentName,
           'message': message,
@@ -296,7 +277,7 @@ class ApiService {
   Future<UserProfile?> fetchUserProfile() async {
     final url = Uri.parse('$_baseUrl/user/profile');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         return UserProfile.fromJson(jsonDecode(response.body));
       } else {
@@ -314,9 +295,9 @@ class ApiService {
     print('Calling API: $url to award $amount XP for $eventName');
 
     try {
-       final response = await http.post(
+       final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({
           // No user_id needed in the body anymore
           'amount': amount,
@@ -342,7 +323,7 @@ class ApiService {
     final url = Uri.parse('$_baseUrl/overseer/generate-summary');
     try {
       // This is a POST request with an empty body
-      final response = await http.post(url, headers: _getHeaders());
+      final response = await _client.post(url);
       if (response.statusCode != 200) {
         final errorData = jsonDecode(response.body);
         throw ApiException(errorData['detail'] ?? 'Failed to generate summary.');
@@ -356,7 +337,7 @@ class ApiService {
   Future<DailySummary?> fetchDailySummary() async {
     final url = Uri.parse('$_baseUrl/overseer/latest-summary');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         return DailySummary.fromJson(jsonDecode(response.body));
       } else if (response.statusCode == 404) {
@@ -375,9 +356,9 @@ class ApiService {
   Future<JournalEntry?> addJournalEntry(String content) async {
     final url = Uri.parse('$_baseUrl/journal/add');
     try {
-      final response = await http.post(
+      final response = await _client.post(
         url,
-        headers: _getHeaders(),
+        // headers are now handled by the interceptor
         body: jsonEncode({'content': content}),
       );
 
@@ -402,7 +383,7 @@ class ApiService {
   Future<List<JournalTimelineItem>> fetchTimelinePage(int page, {int pageSize = 20}) async {
     final url = Uri.parse('$_baseUrl/journal/timeline?page=$page&page_size=$pageSize');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) {
@@ -424,7 +405,7 @@ class ApiService {
   Future<List<AgentTimelineItem>> fetchAgentTimelinePage(String agentName, int page, {int pageSize = 20}) async {
     final url = Uri.parse('$_baseUrl/ai/timeline/$agentName?page=$page&page_size=$pageSize');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => AgentTimelineItem.fromJson(json)).toList();
@@ -440,7 +421,7 @@ class ApiService {
   Future<NutrientBreakdown?> getDailyNutrientBreakdown() async {
     final url = Uri.parse('$_baseUrl/trackers/calories/daily-breakdown');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         return NutrientBreakdown.fromJson(jsonDecode(response.body));
       }
@@ -453,7 +434,7 @@ class ApiService {
   Future<List<ChartDataPoint>> getWeightChartHistory({int days = 7}) async {
     final url = Uri.parse('$_baseUrl/trackers/weight/chart-history?period_days=$days');
     try {
-      final response = await http.get(url, headers: _getHeaders());
+      final response = await _client.get(url);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         return data.map((json) => ChartDataPoint.fromJson(json)).toList();

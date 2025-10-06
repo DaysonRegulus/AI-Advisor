@@ -221,10 +221,17 @@ async def get_user_goals(
     supabase: Client = Depends(get_supabase_client)
 ):
     user_id = current_user.user.id
-    res = supabase.table("user_goals").select("*").eq("user_id", user_id).single().execute()
+    
+    # THE FIX: We remove .single() and check the data ourselves.
+    res = supabase.table("user_goals").select("*").eq("user_id", user_id).execute()
+
+    # If the data list is empty, it means no goals are set for this user.
+    # This is not a server error, it's a "Not Found" case.
     if not res.data:
-        raise HTTPException(status_code=404, detail="User goals not found.")
-    return res.data
+        raise HTTPException(status_code=404, detail="User goals not found. This is expected for new users.")
+    
+    # If data exists, return the first (and only) result.
+    return res.data[0]
 
 # The rest of the GET endpoints follow the same pattern
 @router.get("/trackers/water/today")

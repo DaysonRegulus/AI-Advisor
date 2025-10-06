@@ -12,6 +12,7 @@ import 'providers/refresh_provider.dart';
 import 'providers/calorie_provider.dart';
 import 'features/authentication/screens/auth_wrapper.dart';
 import 'features/authentication/providers/auth_provider.dart';
+import 'core/services/navigation_service.dart';
 import 'locator.dart';
 
 void main() {
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Personal AI Advisor',
+        navigatorKey: NavigationService.navigatorKey,
         theme: ThemeData(
           primarySwatch: Colors.green,
           visualDensity: VisualDensity.adaptivePlatformDensity,

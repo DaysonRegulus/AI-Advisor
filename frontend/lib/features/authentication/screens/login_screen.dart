@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  bool _isLoading = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -30,12 +32,17 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
 
+    setState(() { _isLoading = true; });
+
     // Use context.read for one-off function calls inside a method.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.login(_emailController.text, _passwordController.text);
 
-    // After the await, we can check if there was an error.
-    if (mounted && authProvider.error != null) {
+    // Important: check if the widget is still mounted.
+    if (!mounted) return;
+    setState(() { _isLoading = false; });
+
+    if (authProvider.error != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error!),
@@ -47,6 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToSignUp() {
+    if (_isLoading) return; // Prevent navigation while loading
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (context) => const SignUpScreen()),
     );
@@ -101,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  authProvider.isLoading
+                  _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(
                           onPressed: _login,

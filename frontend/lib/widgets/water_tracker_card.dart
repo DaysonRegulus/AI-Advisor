@@ -9,24 +9,23 @@ import '../providers/user_profile_provider.dart';
 import '../providers/refresh_provider.dart';
 import '../api/api_service.dart';
 import '../screens/trackers/water_log_screen.dart';
+import '../locator.dart';
 
 class WaterTrackerCard extends StatelessWidget {
   const WaterTrackerCard({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // We listen to multiple providers to build this widget
     final dashboardProvider = Provider.of<DashboardProvider>(context);
     final goalProvider = Provider.of<GoalProvider>(context);
 
-    // Set default goals if none are fetched
     final waterGoal = goalProvider.userGoals?.dailyWaterGoalMl ?? 2500;
     final currentIntake = dashboardProvider.todaysWaterIntake;
     
-    // Calculate the percentage, ensuring we don't divide by zero
     final double percentage = waterGoal > 0 ? (currentIntake / waterGoal) * 100 : 0;
     
-    final apiService = ApiService(); // Temporary for button actions
+    // Get the singleton instance from our service locator.
+    final apiService = locator<ApiService>();
 
     return InkWell(
         onTap: () {
@@ -42,7 +41,6 @@ class WaterTrackerCard extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Circular Progress Indicator
               SleekCircularSlider(
                 appearance: CircularSliderAppearance(
                   size: 80,
@@ -66,7 +64,6 @@ class WaterTrackerCard extends StatelessWidget {
                 max: 100,
                 initialValue: percentage,
               ),
-              // Text Info
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -75,28 +72,29 @@ class WaterTrackerCard extends StatelessWidget {
                   Text("$currentIntake / $waterGoal ml", style: const TextStyle(fontSize: 16, color: Colors.grey)),
                 ],
               ),
-              // Action Buttons
               Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.remove_circle, color: Colors.blue, size: 30),
                     onPressed: () async {
-                      // In a real app, this would be a configurable amount
+                      // Note: We should add a feature to undo a specific log later.
+                      // For now, this just logs a negative value if needed.
                       const amount = -250; 
                       await apiService.logWater(amount);
                       dashboardProvider.addWater(amount);
+                      // Awarding XP for removing water might not be desired, but we'll leave it for now.
                       Provider.of<UserProfileProvider>(context, listen: false).awardXpForEvent('water_log', 5);
+                      // This global refresh can be intensive. A more targeted update is better.
+                      // For now, it ensures consistency.
                       await context.read<RefreshProvider>().refreshAllData!();
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.add_circle, color: Colors.blue, size: 30),
                     onPressed: () async {
-                      const amount = 250; // Assume one glass is 250ml
+                      const amount = 250;
                       await apiService.logWater(amount);
-                      // Optimistically update the UI
                       dashboardProvider.addWater(amount);
-                      // Award XP
                       Provider.of<UserProfileProvider>(context, listen: false).awardXpForEvent('water_log', 5);
                       await context.read<RefreshProvider>().refreshAllData!();
                     },

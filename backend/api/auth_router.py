@@ -24,6 +24,10 @@ class AuthResponse(BaseModel):
 # --- NEW MODEL FOR REFRESH TOKEN REQUEST ---
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+    
+# --- NEW MODEL FOR FORGOT PASSWORD ---
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 # --- Signup Endpoint (Unchanged) ---
 @router.post("/auth/signup", status_code=status.HTTP_201_CREATED)
@@ -116,3 +120,29 @@ def refresh_access_token(
         )
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    
+# --- NEW FORGOT PASSWORD ENDPOINT ---
+@router.post("/auth/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(
+    request: ForgotPasswordRequest,
+    supabase: Client = Depends(get_supabase_client)
+):
+    """
+    Initiates the password reset process for a user.
+    """
+    try:
+        # This Supabase function securely handles the process of generating a
+        # reset token and sending the email.
+        supabase.auth.reset_password_for_email(email=request.email)
+
+        # SECURITY BEST PRACTICE: Always return a generic success message.
+        # This prevents "user enumeration", where an attacker could use this
+        # endpoint to figure out which emails are registered with your service.
+        return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+    except Exception as e:
+        # Even if an error occurs, we still return a generic message to the client
+        # but we should log the error on the server for debugging.
+        print(f"An error occurred during password reset attempt: {e}")
+        # This ensures the client-side experience is always the same.
+        return {"message": "If an account with that email exists, a password reset link has been sent."}

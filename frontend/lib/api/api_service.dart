@@ -115,6 +115,26 @@ class ApiService {
     }
   }
 
+  Future<void> forgotPassword({required String email}) async {
+    final url = Uri.parse('$_baseUrl/auth/forgot-password');
+    try {
+      final response = await _client.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      if (response.statusCode != 200) {
+        // Even if the backend gives a specific error, we'll handle it generically
+        // on the UI side, but we can throw here for consistency.
+        final errorData = jsonDecode(response.body);
+        throw ApiException(errorData['detail'] ?? 'Failed to send reset link.');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Could not connect to the server.');
+    }
+  }
+
   // --- ALL SUBSEQUENT METHODS ARE NOW PROTECTED ---
 
   Future<FoodLog?> logFood({

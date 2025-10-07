@@ -1,4 +1,4 @@
-package com.example.frontend
+package com.aiadvisor.app
 
 import io.flutter.embedding.android.FlutterActivity
 

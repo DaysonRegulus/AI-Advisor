@@ -1,17 +1,19 @@
 // lib/config.dart.example
 //
 // HOW TO USE:
-// 1. Copy this file.
-// 2. Rename the copy to 'config.dart'.
-// 3. Fill in your own values below.
+// 1. Copy this file's content.
+// 2. Create a new file named 'config.dart' in the same directory (lib/).
+// 3. Paste the content and uncomment the baseUrl you want to use.
 //
-// The 'config.dart' file is ignored by Git to keep your secrets safe.
+// The 'config.dart' file is ignored by Git to keep your choice of environment private.
 
 class AppConfig {
-  // For the Android Emulator, this should be 'http://10.0.2.2:8000'
-  // For a physical device on the same Wi-Fi, find your computer's local IP address.
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // --- For PRODUCTION (when testing the live Fly.io app) ---
+  // Replace with your actual Fly.io URL
+  // static const String baseUrl = 'https://your-app-name.fly.dev';
 
-  // Paste the user ID (UID) of your test user from the Supabase Auth dashboard.
-  static const String testUserId = 'paste-your-supabase-test-user-id-here';
+  // --- For LOCAL DEVELOPMENT (when running the backend on your machine) ---
+  // For the Android Emulator, this should be 'http://10.0.2.2:8000'
+  // For the iOS Simulator, this would be 'http://localhost:8000'
+  static const String baseUrl = 'http://10.0.2.2:8000';
 }

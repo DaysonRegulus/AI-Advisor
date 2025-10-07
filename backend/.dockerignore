@@ -1,0 +1,21 @@
+# Ignore the virtual environment folder
+venv/
+
+# Ignore Python's cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore IDE and editor configuration folders
+.vscode/
+.idea/
+
+# Ignore our local secrets file
+.env
+
+# Ignore our local debug logs
+debug_logs/
+
+# Ignore our schema file
+schema.sql

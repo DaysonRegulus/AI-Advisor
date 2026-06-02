@@ -1,154 +1,175 @@
-# Personal AI Advisor
+<br/>
+<div align="center">
+  <!-- You can replace this with a real logo file later -->
+  <img src="frontend\assets\icons\icon.png" alt="Clarity AI Logo" width="100">
+  <h1 align="center">Clarity AI</h1>
+  <p align="center">
+    Your Personal Multi-Agent AI Companion for Holistic Self-Improvement.
+    <br />
+    <a href="#-key-features"><strong>Explore the features »</strong></a>
+    <br />
+    <br />
+  </p>
+</div>
 
-**A next-generation, multi-agent personal development platform designed to provide holistic, intelligent guidance across all key areas of life.**
-
----
-
-## 🚀 About The Project
-
-The Personal AI Advisor is more than just a single chatbot. It's a sophisticated, multi-agent AI system designed to act as a personal team of expert coaches. The app provides a centralized platform where a user can interact with specialized AI agents, track their progress, and receive synthesized, cross-domain insights to foster growth and self-awareness.
-
-This project was built to explore the power of modern Large Language Models (LLMs) beyond simple Q&A, creating an integrated system where multiple AIs work together under the supervision of a "Master Overseer" to provide coherent, contextual, and personalized advice. Which then evolved into this.
-
-### Core Features
-
-*   **🧠 Multi-Agent System:** Interact with a team of 7+ specialized AI experts, each with a unique persona and domain knowledge.
-*   **🤖 Master Overseer AI:** A meta-level AI that analyzes all user interactions and journal entries to provide a synthesized daily summary, highlighting progress, challenges, and cross-domain insights.
-*   **✍️ Interactive Journaling:** A "group chat" style journal where users can write their thoughts and receive insightful, encouraging comments from their AI team.
-*   **🏆 Gamified Progression:** A robust Leveling and XP system that rewards positive actions like journaling, completing tasks, and achieving goals.
-*   **📊 Future-Proof for Trackers:** Architected to easily incorporate various life-domain trackers (fitness, nutrition, habits, etc.).
-*   **🔒 Secure & Private:** Built with security first, using Supabase's Row Level Security to ensure all user data is completely private and accessible only to them.
-
----
-
-## 🛠️ Tech Stack
-
-This project uses a modern, scalable, and efficient tech stack, chosen for its excellent developer experience and performance.
-
-*   **Frontend:** [Flutter](https://flutter.dev/) - For building a beautiful, natively compiled mobile application for Android from a single codebase.
-*   **Backend:** [FastAPI](https://fastapi.tiangolo.com/) (Python) - For creating a high-performance, asynchronous, and easy-to-use API.
-*   **Database:** [Supabase](https://supabase.com/) (PostgreSQL) - An open-source Firebase alternative providing a database, authentication, and secure, auto-generated APIs.
-*   **AI Integration:** [Google Gemini API](https://ai.google.dev/) (Gemini 2.5 Flash) - Leveraging a powerful and fast large language model with a massive context window for intelligent responses and deep memory.
-
-![Tech Stack](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
-![Tech Stack](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Tech Stack](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Tech Stack](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
-![Tech Stack](https://img.shields.io/badge/Google_Gemini-8E77F0?style=for-the-badge&logo=google&logoColor=white)
-
+<!-- Badges -->
+<div align="center">
+  <img src="https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter" alt="Flutter">
+  <img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/Backend-FastAPI-green?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Database-Supabase-green?logo=supabase" alt="Supabase">
+  <img src="https://img.shields.io/badge/AI-Google%20Gemini-purple" alt="Gemini">
+  <img src="https://img.shields.io/badge/Deployment-Fly.io-violet?logo=fly" alt="Fly.io">
+  <img src="https://img.shields.io/badge/License-MIT-lightgrey" alt="License">
+</div>
 
 ---
 
-## ⚙️ Getting Started
+**Clarity AI** is a next-generation personal wellness application designed to provide holistic guidance and insights across all facets of life. It moves beyond single-purpose chatbots by integrating a suite of specialized AI coaches; from a personal trainer to a financial advisor; into a single, cohesive platform. Through reflective journaling, real-time feedback, and comprehensive progress tracking, Clarity AI empowers users to understand themselves better and take actionable steps towards their goals.
 
-To get a local copy up and running, follow these simple steps.
+This project is a full-stack, production-ready application showcasing a modern, scalable architecture using Flutter for the cross-platform mobile app and a high-performance FastAPI backend, all deployed on a global edge network.
+
+<br/>
+
+## ✨ Key Features
+
+*   **Multi-Agent AI Coaching:** Interact with a team of specialized AI experts, each with a unique persona and knowledge domain, including:
+    *   Personal Trainer & Nutritionist
+    *   Mental Health Coach
+    *   Financial Advisor
+    *   Career Coach
+    *   ...and more.
+
+*   **Reflective Journaling with Real-Time Feedback:** Write journal entries and receive instant, insightful, and encouraging comments from your team of AI coaches, delivered via a live WebSocket connection.
+
+*   **Advanced Scalable AI Memory:** A custom-built "Cumulative Summary + Active Window" memory system allows AI agents to maintain long-term context on your journey, providing deeply personalized and relevant advice without exceeding context limits.
+
+*   **Comprehensive Health & Wellness Dashboard:** Track your daily progress at a glance with an integrated dashboard for:
+    *   Water Intake
+    *   Nutritional Analysis (Calories, Macros, Micros)
+    *   Weight Logging with Historical Charts
+
+*   **Gamification & Engagement System:** Stay motivated by earning XP for completing tasks like journaling and logging meals. Level up and track your progress through a rewarding gamification layer.
+
+*   **Secure Authentication & User Data Isolation:** A complete, secure authentication system (Login, Signup, Session Management) built on Supabase, with Row Level Security (RLS) enabled at the database level to guarantee that user data is strictly isolated and protected.
+
+<!--
+## 📸 Screenshots
+
+*(This section would feature high-quality screenshots of the application)*
+
+| Dashboard                                | Journal with AI Comments                  | Agent Chat                               |
+| ---------------------------------------- | ----------------------------------------- | ---------------------------------------- |
+| *(Image of the main HomeScreen)*        | *(Image of the JournalScreen)*            | *(Image of the AgentChatScreen)*         |
+| A holistic view of your daily progress.  | Receive instant feedback on your thoughts. | Get personalized advice from an expert.  |
+-->
+
+## 🛠️ Technical Architecture
+
+This project is architected as a modern, decoupled full-stack application, with a clear separation of concerns between the frontend, backend, and database services.
+
+| Component         | Technology                                                                          | Description                                                                                             |
+| ----------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Mobile App**    | [Flutter](https://flutter.dev/)                                                     | A cross-platform UI toolkit for building the native iOS and Android application from a single codebase. |
+| **State Mgmt**    | [Provider](https://pub.dev/packages/provider)                                       | For clean, scalable, and reactive state management across the Flutter application.                      |
+| **Backend API**   | [FastAPI](https://fastapi.tiangolo.com/) (Python)                                   | A high-performance, asynchronous web framework for building the RESTful API and WebSocket services.   |
+| **AI Model**      | [Google Gemini](https://deepmind.google/technologies/gemini/)                       | Powers the intelligence and conversational abilities of all AI agents.                                  |
+| **Database**      | [Supabase](https://supabase.com/) (PostgreSQL)                                      | The backend-as-a-service provider for the Postgres database, user authentication, and RLS.              |
+| **Real-time**     | WebSockets                                                                          | Enables instant, bi-directional communication for pushing live AI journal comments to the client.       |
+| **Deployment**    | [Docker](https://www.docker.com/), [Fly.io](https://fly.io/)                         | The backend is containerized with Docker and deployed globally on Fly.io's edge computing platform.     |
+
+## 🚀 Getting Started
+
+Follow these instructions to get a local copy of the project up and running for development and testing purposes.
 
 ### Prerequisites
 
-*   An account with [Supabase](https://app.supabase.com) (Free Tier).
-*   An API Key from [Google AI Studio](https://aistudio.google.com/app/apikey) (Free Tier).
-*   [Flutter SDK](https://docs.flutter.dev/get-started/install) installed and configured.
-*   [Python](https://www.python.org/downloads/) (3.9+) installed.
-*   An IDE like [VS Code](https://code.visualstudio.com/) with Flutter and Python extensions.
-*   An Android Emulator setup via [Android Studio](https://developer.android.com/studio).
+Ensure you have the following tools installed on your machine:
+*   [Flutter SDK](https://docs.flutter.dev/get-started/install) (version 3.x or higher)
+*   [Python](https://www.python.org/downloads/) (version 3.9 or higher)
+*   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+*   [Fly.io CLI (`flyctl`)](https://fly.io/docs/hands-on/install-flyctl/)
 
-### Installation & Setup
+### 1. Backend Setup
 
-#### 1. Backend Setup (FastAPI)
+The backend server must be running for the frontend to communicate with.
 
-1.  **Clone the repository:**
-    ```sh
-    git clone https://github.com/DaysonRegulus/AI-Advisor.git
-    cd AI-Advisor
+```bash
+# 1. Clone the repository
+git clone https://github.com/DaysonRegulus/AI-Advisor.git
+cd AI-Advisor/backend
+
+# 2. Create and activate a Python virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Set up your environment secrets
+# Create a .env file by copying the template
+cp .env.template .env
+
+# Now, open the .env file and fill in your actual secret keys from
+# your Supabase and Google AI project dashboards.
+
+# 5. Run the development server
+uvicorn main:app --reload --host 0.0.0.0
+```
+> **Note:** The server will be running at `http://127.0.0.1:8000`. You can access the interactive API documentation at `http://127.0.0.1:8000/docs`.
+
+### 2. Frontend Setup
+
+With the backend running, you can now launch the Flutter application.
+
+```bash
+# 1. Navigate to the frontend directory
+cd ../frontend
+
+# 2. Set up your environment configuration
+# Create a config.dart file from the template
+# (You will need to create the file and copy the contents manually)
+# File: lib/config.dart
+
+# 3. In lib/config.dart, ensure the baseUrl for local development is active:
+# static const String baseUrl = 'http://10.0.2.2:8000';
+
+# 4. Get all Flutter dependencies
+flutter pub get
+
+# 5. Run the application on your connected device or emulator
+flutter run
+```
+
+## ☁️ Deployment
+
+The backend is configured for production deployment on [Fly.io](https://fly.io/) using Docker.
+
+1.  **Containerize the App:** The included `Dockerfile` uses a multi-stage build to create a lightweight, optimized production image.
+2.  **Set Secrets:** Production secrets are managed securely using Fly.io's encrypted secret store. They are never hardcoded or included in the Docker image.
+    ```bash
+    fly secrets set SUPABASE_URL="..." GEMINI_API_KEY="..." ...
     ```
-2.  **Create and activate a Python virtual environment:**
-    ```sh
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
+3.  **Deploy:** A single command builds the image, pushes it to the registry, and deploys it globally.
+    ```bash
+    fly deploy
     ```
-3.  **Install dependencies:**
-    ```sh
-    pip install -r requirements.txt
-    ```
-4.  **Set up environment variables:**
-    *   Create a file named `.env` in the `backend/` directory.
-    *   Get your credentials from Supabase (`Settings` -> `API`) and Google AI Studio.
-    *   Add your credentials to the `.env` file:
-      ```ini
-      GEMINI_API_KEY="your_google_ai_studio_api_key"
-      SUPABASE_URL="your_supabase_project_url"
-      SUPABASE_KEY="your_supabase_service_role_key" 
-      DEBUG_MODE="False"
-      ```
-      *Note: Use the `service_role` key for the backend to bypass RLS policies.*
-5.  **Set up the Supabase Database:**
-    To set up the Supabase PostgreSQL database for this project, follow these steps:
-
-    1.  Create a new project on [Supabase](https://app.supabase.com).
-    2.  Navigate to the **SQL Editor** in your Supabase project dashboard.
-    3.  Open the `backend/schema.sql` file from this repository.
-    4.  Copy the entire contents of the file.
-    5.  Paste the SQL script into the Supabase SQL Editor and click **"RUN"**.
-
-    This will create all necessary tables, indexes, and security policies required for the application to function correctly.
-6.  **Run the backend server:**
-    ```sh
-    uvicorn main:app --reload --host 0.0.0.0
-    ```
-    Your backend is now running at `http://localhost:8000`.
-
-#### 2. Frontend Setup (Flutter)
-
-1.  **Navigate to the frontend directory:**
-    ```sh
-    cd ../frontend
-    ```
-2.  **Get Flutter packages:**
-    ```sh
-    flutter pub get
-    ```
-3.  **Configure API connection:**
-    *   Open the file `lib/api/api_service.dart`.
-    *   Update the `_testUserId` with a user UID you create in your Supabase Auth dashboard.
-    *   Ensure the `_baseUrl` is pointing to your machine's local IP for the emulator (`http://10.0.2.2:8000/api`).
-4.  **Run the app:**
-    *   Make sure your Android Emulator is running.
-    *   Start the Flutter application:
-    ```sh
-    flutter run
-    ```
-
----
 
 ## 🗺️ Roadmap
 
-This project is under active development. Here's a look at the planned features:
+This project is an active work-in-progress. Future enhancements include:
 
 *   [x] Core multi-agent chat functionality.
 *   [x] "Master Overseer" daily summaries.
 *   [x] Interactive Journaling with AI commentary.
 *   [x] XP & Leveling system.
 *   [x] Scalable AI Memory architecture.
-*   [ ] **Trackers:** Implement trackers for Weight, Water, Fitness, and Habits.
+*   [x] **Trackers:** Implement trackers for Weight, Water, Fitness, and Habits.
+*   [x] **User Authentication:** Full sign-up, login, and profile management flow.
+*   [x] **Deployment:** Host the backend on a public cloud service like Render.
 *   [ ] **Skill Tree:** Design and build a deep, gamified skill tree for personal development.
-*   [ ] **User Authentication:** Full sign-up, login, and profile management flow.
-*   [ ] **Deployment:** Host the backend on a public cloud service like Render.
 *   [ ] **UI/UX Polish:** Further refine the user interface and experience.
-
-See the [open issues](https://github.com/DaysonRegulus/AI-Advisor/issues) for a full list of proposed features (and known issues).
-
----
-
-## 🙏 Acknowledgements
-
-This project would not have been possible without the incredible work of the teams behind:
-*   [Flutter](https://flutter.dev/)
-*   [FastAPI](https://fastapi.tiangolo.com/)
-*   [Supabase](https://supabase.com/)
-*   [Google's Gemini](https://ai.google.dev/)
-
----
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the `LICENSE.md` file for details.
+This project is distributed under the MIT License. See `LICENSE` for more information.

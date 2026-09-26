@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../screens/main_scaffold.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
+import 'signup_screen.dart';
 import 'splash_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
@@ -12,22 +13,20 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use Consumer to listen to authentication state changes.
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
-        print('AuthWrapper rebuilding. isAuthenticated: ${authProvider.isAuthenticated}, isLoading: ${authProvider.isLoading}');
-        // If we are still running the initial check, show the splash screen.
+        // State 1: Running initial auth token check
         if (authProvider.isLoading) {
           return const SplashScreen();
         }
 
-        // If the user is authenticated, show the main app.
+        // State 2: Authenticated, show main app
         if (authProvider.isAuthenticated) {
           return const MainScaffold();
         }
 
-        // Otherwise, the user is not authenticated, show the login screen.
-        return const LoginScreen();
+        // State 3: Unauthenticated, show login or signup based on internal state
+        return authProvider.showLogin ? const LoginScreen() : const SignUpScreen();
       },
     );
   }

@@ -55,10 +55,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToSignUp() {
-    if (_isLoading) return; // Prevent navigation while loading
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const SignUpScreen()),
-    );
+    if (_isLoading) return;
+    // Tell the provider to toggle the view. The AuthWrapper will rebuild automatically.
+    Provider.of<AuthProvider>(context, listen: false).toggleAuthView();
   }
 
   @override

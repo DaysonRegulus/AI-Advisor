@@ -1,51 +1,30 @@
-# --- Stage 1: The "Builder" Stage ---
-# We use a specific, slim version of Python on a stable Debian release ("buster").
-# Naming this stage "builder" allows us to refer to it later.
-FROM python:3.9-slim-buster AS builder
-
-# Set the working directory inside the container. All subsequent commands run here.
-WORKDIR /app
-
-# Best practice: Upgrade pip to the latest version inside the container.
-RUN pip install --upgrade pip
-
-# Copy ONLY the requirements file first.
-# This leverages Docker's layer caching. If requirements.txt doesn't change,
-# Docker will reuse the cached result of the next step, making builds much faster.
-COPY requirements.txt .
-
-# Create pre-compiled "wheels" for all our dependencies. This makes the
-# final installation in the next stage faster and more reliable.
-RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
-
-
-# --- Stage 2: The "Final" Production Stage ---
-# Start from a fresh, clean base image again. This ensures no build tools
-# or temporary files from the builder stage are included in our final image.
+# Use a lightweight, stable, official Python runtime
 FROM python:3.9-slim-buster
 
-# Set the working directory.
+# Set working directory
 WORKDIR /app
 
-# Copy the pre-compiled wheels from the "builder" stage.
-COPY --from=builder /wheels /wheels
+# Set environment variables
+# PYTHONDONTWRITEBYTECODE: Prevents Python from writing .pyc files to disk
+# PYTHONUNBUFFERED: Prevents Python from buffering stdout/stderr (crucial for live logging)
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Copy the requirements file from the "builder" stage.
-COPY --from=builder /app/requirements.txt .
+# Upgrade pip to the latest version
+RUN pip install --no-cache-dir --upgrade pip
 
-# Install all dependencies from the local wheels. This is much faster
-# than downloading them from the internet again.
-RUN pip install --no-cache-dir /wheels/*
+# Copy only requirements first to leverage Docker's layer caching.
+# If requirements.txt hasn't changed, Docker skips this step entirely.
+COPY requirements.txt .
 
-# Now, copy our actual application code into the container.
-# This is done last. If we only change our Python code, Docker will
-# reuse all the previous cached layers, resulting in a near-instant build.
+# Install dependencies directly into the system path
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application code
 COPY . .
 
-# The command to run when the container starts.
-# We tell uvicorn to run our 'main:app' application.
-# --host 0.0.0.0 is ESSENTIAL. It tells the server to listen on all network
-# interfaces inside the container, making it accessible from the outside.
-# --port 8000 is the port we will expose.
-# We do NOT use --reload in production.
+# Expose the production port
+EXPOSE 8000
+
+# Start uvicorn
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -58,7 +58,7 @@ class JournalProvider with ChangeNotifier {
 
       // 3. CONSTRUCT THE SECURE URL: Append the token as a query parameter.
       final wsUrl = Uri.parse(
-        AppConfig.baseUrl.replaceFirst('http', 'ws') + '/ws/comments?token=$accessToken'
+        '${AppConfig.baseUrl.replaceFirst('http', 'ws')}/ws/comments?token=$accessToken'
       );
       
       print('WebSocket: Connecting to $wsUrl'); // For debugging

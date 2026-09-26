@@ -14,7 +14,7 @@ import '../models/ai_comment.dart';
 import 'add_journal_screen.dart';
 
 class JournalScreen extends StatefulWidget {
-  const JournalScreen({Key? key}) : super(key: key);
+  const JournalScreen({super.key});
 
   @override
   _JournalScreenState createState() => _JournalScreenState();
@@ -127,8 +127,8 @@ class _JournalScreenState extends State<JournalScreen> {
             );
           }
         },
-        child: const Icon(Icons.add),
-        backgroundColor: Colors.green, // primary color
+        backgroundColor: Colors.green,
+        child: const Icon(Icons.add), // primary color
       ),
     );
   }
@@ -137,7 +137,7 @@ class _JournalScreenState extends State<JournalScreen> {
 // --- WIDGET FOR THE USER'S JOURNAL ENTRY BUBBLE ---
 class _UserJournalBubble extends StatefulWidget {
   final JournalEntry entry;
-  const _UserJournalBubble({Key? key, required this.entry}) : super(key: key);
+  const _UserJournalBubble({required this.entry});
 
   @override
   __UserJournalBubbleState createState() => __UserJournalBubbleState();
@@ -226,7 +226,7 @@ class __UserJournalBubbleState extends State<_UserJournalBubble> {
 // --- WIDGET FOR THE AI'S COMMENT BUBBLE ---
 class _AiCommentBubble extends StatelessWidget {
   final AIComment comment;
-  const _AiCommentBubble({Key? key, required this.comment}) : super(key: key);
+  const _AiCommentBubble({required this.comment});
 
   // The agent data map remains the same, it's correct.
   static const agentData = {
@@ -301,7 +301,7 @@ class _AiCommentBubble extends StatelessWidget {
 
 // --- WIDGET FOR THE "AGENTS ARE THINKING" BUBBLE ---
 class _AiThinkingBubble extends StatelessWidget {
-  const _AiThinkingBubble({Key? key}) : super(key: key);
+  const _AiThinkingBubble();
 
   @override
   Widget build(BuildContext context) {

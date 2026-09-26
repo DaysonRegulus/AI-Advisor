@@ -12,7 +12,7 @@ import '../../providers/weight_log_provider.dart';
 import '../../models/chart_data_point.dart';
 
 class WeightLogScreen extends StatelessWidget {
-  const WeightLogScreen({Key? key}) : super(key: key);
+  const WeightLogScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class WeightLogScreen extends StatelessWidget {
 }
 
 class _WeightLogScreenContent extends StatefulWidget {
-  const _WeightLogScreenContent({Key? key}) : super(key: key);
+  const _WeightLogScreenContent();
 
   @override
   _WeightLogScreenContentState createState() => _WeightLogScreenContentState();
@@ -149,7 +149,7 @@ class _WeightLogScreenContentState extends State<_WeightLogScreenContent> {
 // --- A dedicated widget for the FL Chart ---
 class _WeightChart extends StatelessWidget {
   final List<ChartDataPoint> data;
-  const _WeightChart({Key? key, required this.data}) : super(key: key);
+  const _WeightChart({required this.data});
 
   @override
   Widget build(BuildContext context) {

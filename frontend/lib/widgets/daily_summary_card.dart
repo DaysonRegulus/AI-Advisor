@@ -6,7 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../providers/daily_summary_provider.dart';
 
 class DailySummaryCard extends StatelessWidget {
-  const DailySummaryCard({Key? key}) : super(key: key);
+  const DailySummaryCard({super.key});
 
   @override
   Widget build(BuildContext context) {

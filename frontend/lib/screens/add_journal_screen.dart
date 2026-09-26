@@ -7,7 +7,7 @@ import '../providers/journal_provider.dart';
 
 // The class name is 'AddJournalScreen'
 class AddJournalScreen extends StatefulWidget {
-  const AddJournalScreen({Key? key}) : super(key: key);
+  const AddJournalScreen({super.key});
 
   @override
   _AddJournalScreenState createState() => _AddJournalScreenState();

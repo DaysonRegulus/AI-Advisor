@@ -5,7 +5,7 @@ import 'package:percent_indicator/percent_indicator.dart';
 import '../providers/user_profile_provider.dart';
 
 class XpProgressBar extends StatelessWidget {
-  const XpProgressBar({Key? key}) : super(key: key);
+  const XpProgressBar({super.key});
 
   @override
   Widget build(BuildContext context) {

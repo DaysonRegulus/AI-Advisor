@@ -13,7 +13,7 @@ import 'chats_screen.dart';
 import 'journal_list_screen.dart';
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({Key? key}) : super(key: key);
+  const MainScaffold({super.key});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();

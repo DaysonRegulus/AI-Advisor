@@ -6,7 +6,7 @@ import '../../providers/goal_provider.dart';
 import '../../models/nutrient_breakdown.dart';
 
 class CalorieTrackerScreen extends StatefulWidget {
-  const CalorieTrackerScreen({Key? key}) : super(key: key);
+  const CalorieTrackerScreen({super.key});
 
   @override
   _CalorieTrackerScreenState createState() => _CalorieTrackerScreenState();
@@ -81,7 +81,7 @@ class _CalorieTrackerScreenState extends State<CalorieTrackerScreen> {
         ...breakdown.micros.entries.map((entry) => ListTile(
               title: Text(entry.key.replaceAll('_', ' ').capitalize()),
               trailing: Text("${entry.value.toStringAsFixed(1)} g/mg"),
-            )).toList(),
+            )),
       ],
     );
   }

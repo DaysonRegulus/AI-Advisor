@@ -6,7 +6,7 @@ import '../providers/goal_provider.dart';
 import '../screens/trackers/weight_log_screen.dart';
 
 class WeightTrackerCard extends StatelessWidget {
-  const WeightTrackerCard({Key? key}) : super(key: key);
+  const WeightTrackerCard({super.key});
 
   @override
   Widget build(BuildContext context) {

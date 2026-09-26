@@ -8,7 +8,7 @@ import '../models/food_log.dart';
 import '../screens/trackers/add_food_screen.dart';
 
 class FoodTimeline extends StatefulWidget {
-  const FoodTimeline({Key? key}) : super(key: key);
+  const FoodTimeline({super.key});
 
   @override
   _FoodTimelineState createState() => _FoodTimelineState();

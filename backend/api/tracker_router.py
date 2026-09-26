@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
 from dependencies import get_supabase_client, get_current_user
+from services.gamification_service import award_xp_to_user
 
 router = APIRouter()
 
@@ -74,26 +75,12 @@ class ChartDataPoint(BaseModel):
     avg_weight: float
 
 
-# --- Helper Function for XP (will be refactored later, now uses internal call) ---
+# --- Helper Function for XP ---
 async def award_xp(user_id: str, amount: int, event_name: str, supabase: Client):
-    # This is a temporary direct call. We will refactor this to a service in Step 13.
-    from api.user_router import award_xp as award_xp_logic
-    
-    class XPRequest:
-        def __init__(self, user_id, amount, event_name):
-            self.user_id = user_id
-            self.amount = amount
-            self.event_name = event_name
-    
     try:
-        # Simulate the request object the award_xp function expects
-        request = XPRequest(user_id, amount, event_name)
-        # Note: This is not ideal, but avoids the circular dependency / httpx call for now.
-        # We are essentially calling the function from the other router directly.
-        award_xp_logic(request, supabase)
-        print(f"Awarded {amount} XP for event '{event_name}'.")
+        award_xp_to_user(user_id, amount, event_name, supabase)
     except Exception as e:
-         print(f"CRITICAL WARNING: Action was logged, but failed to award XP. Error: {e}")
+        print(f"CRITICAL WARNING: Action was logged, but failed to award XP. Error: {e}")
 
 
 # --- Endpoints ---

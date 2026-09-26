@@ -12,7 +12,7 @@ import '../screens/trackers/water_log_screen.dart';
 import '../locator.dart';
 
 class WaterTrackerCard extends StatelessWidget {
-  const WaterTrackerCard({Key? key}) : super(key: key);
+  const WaterTrackerCard({super.key});
 
   @override
   Widget build(BuildContext context) {

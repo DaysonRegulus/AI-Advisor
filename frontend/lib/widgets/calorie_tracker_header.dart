@@ -9,7 +9,7 @@ import '../providers/calorie_provider.dart';
 import '../screens/trackers/calorie_tracker_screen.dart';
 
 class CalorieTrackerHeader extends StatelessWidget {
-  const CalorieTrackerHeader({Key? key}) : super(key: key);
+  const CalorieTrackerHeader({super.key});
 
   @override
   Widget build(BuildContext context) {

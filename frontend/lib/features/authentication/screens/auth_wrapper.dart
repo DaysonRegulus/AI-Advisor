@@ -9,7 +9,7 @@ import 'signup_screen.dart';
 import 'splash_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {

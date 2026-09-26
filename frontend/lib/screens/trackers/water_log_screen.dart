@@ -8,7 +8,7 @@ import '../../providers/dashboard_provider.dart';
 import '../../providers/user_profile_provider.dart';
 
 class WaterLogScreen extends StatefulWidget {
-  const WaterLogScreen({Key? key}) : super(key: key);
+  const WaterLogScreen({super.key});
 
   @override
   _WaterLogScreenState createState() => _WaterLogScreenState();

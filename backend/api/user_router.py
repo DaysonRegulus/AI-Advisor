@@ -7,12 +7,9 @@ from typing import Optional
 
 # Our project imports
 from dependencies import get_supabase_client, get_current_user
+from services.gamification_service import calculate_next_level_xp, award_xp_to_user
 
 router = APIRouter()
-
-# --- Helper Function for XP Calculation ---
-def calculate_next_level_xp(level: int) -> int:
-    return int(100 * (level ** 1.5))
 
 # --- Pydantic Models ---
 class AwardXpRequest(BaseModel):
@@ -40,48 +37,21 @@ def award_xp(
 ):
     user_id = current_user.user.id # <-- Get user_id from the validated token
     try:
-        profile_res = supabase.table("user_profiles").select("*").eq("id", user_id).single().execute()
-        
-        if not profile_res.data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User profile not found for user_id: {user_id}"
-            )
-        
-        profile = profile_res.data
-        leveled_up = False
-        new_xp = profile['xp_points'] + request.amount
-        current_level = profile['level']
-        xp_for_next = profile['xp_to_next_level']
-
-        while new_xp >= xp_for_next:
-            leveled_up = True
-            current_level += 1
-            new_xp -= xp_for_next
-            xp_for_next = calculate_next_level_xp(current_level)
-        
-        update_response = supabase.table("user_profiles").update({
-            "level": current_level,
-            "xp_points": new_xp,
-            "xp_to_next_level": xp_for_next,
-        }).eq("id", profile['id']).execute()
-        
-        if not update_response.data:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update user profile in the database."
-            )
-
-        return UserProfileResponse(
-            user_id=profile['id'],
-            username=profile.get('username'),
-            level=current_level,
-            xp_points=new_xp,
-            xp_to_next_level=xp_for_next,
-            leveled_up=leveled_up
+        result = award_xp_to_user(
+            user_id=user_id,
+            amount=request.amount,
+            event_name=request.event_name,
+            supabase=supabase
+        )
+        return UserProfileResponse(**result)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
         )
     except Exception as e:
-        if isinstance(e, HTTPException): raise e
+        if isinstance(e, HTTPException):
+            raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An unexpected error occurred while awarding XP: {str(e)}"

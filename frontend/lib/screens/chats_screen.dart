@@ -17,7 +17,7 @@ class Agent {
 
 class ChatsScreen extends StatelessWidget {
   final Future<void> Function() onRefresh;
-  const ChatsScreen({Key? key, required this.onRefresh}) : super(key: key);
+  const ChatsScreen({super.key, required this.onRefresh});
 
   // Define our list of agents here
   static final List<Agent> _agents = [
@@ -45,8 +45,8 @@ class ChatsScreen extends StatelessWidget {
             final agent = _agents[index];
             return ListTile(
               leading: CircleAvatar(
-                child: Icon(agent.icon),
                 backgroundColor: Colors.grey[200],
+                child: Icon(agent.icon),
               ),
               title: Text(agent.title),
               subtitle: Text(agent.subtitle),

@@ -20,7 +20,7 @@ class HomeScreen extends StatelessWidget {
   final Future<void> Function() onRefresh;
 
   // Update the constructor to require this function
-  const HomeScreen({Key? key, required this.onRefresh}) : super(key: key);
+  const HomeScreen({super.key, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -73,35 +73,35 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             children: const [
               Row(
-                children: const [
+                children: [
                   Expanded(child: XpProgressBar()), // Takes up left side
                   Expanded(child: CalorieTrackerHeader()), // Takes up right side
                   // We can add other quick stats here later
                 ],
               ),
-              const SizedBox(height: 16),
-              const Text("Today's Summary", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const DailySummaryCard(),
-              const SizedBox(height: 16),
-              const Divider(indent: 16, endIndent: 16),
+              SizedBox(height: 16),
+              Text("Today's Summary", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              DailySummaryCard(),
+              SizedBox(height: 16),
+              Divider(indent: 16, endIndent: 16),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             
               // --- TRACKER CARDS ---
-              const WaterTrackerCard(),
-              const SizedBox(height: 8),
-              const WeightTrackerCard(),
+              WaterTrackerCard(),
+              SizedBox(height: 8),
+              WeightTrackerCard(),
 
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // --- FOOD TIMELINE ---
-              const Text(
+              Text(
                 "Today's Food Log",
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const Divider(height: 16),
-              const FoodTimeline(),
+              Divider(height: 16),
+              FoodTimeline(),
             ],
           ),
         ),

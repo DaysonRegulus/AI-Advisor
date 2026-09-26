@@ -30,7 +30,7 @@ class AgentChatScreen extends StatefulWidget {
   // It no longer needs agentName, only the title for the AppBar
   final String agentTitle;
 
-  const AgentChatScreen({Key? key, required this.agentTitle}) : super(key: key);
+  const AgentChatScreen({super.key, required this.agentTitle});
 
   @override
   _AgentChatScreenState createState() => _AgentChatScreenState();
@@ -151,7 +151,7 @@ class _AgentChatScreenState extends State<AgentChatScreen> {
 class _ChatMessageBubble extends StatelessWidget {
   final ChatMessage message;
 
-  const _ChatMessageBubble({Key? key, required this.message}) : super(key: key);
+  const _ChatMessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {

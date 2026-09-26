@@ -59,7 +59,7 @@ class AgentTimelineItem {
 }
 
 class ApiService {
-  static const String _baseUrl = '${AppConfig.baseUrl}/api';
+  static String get _baseUrl => '${AppConfig.baseUrl}/api';
 
   final http.Client _client;
   ApiService(this._client); // Constructor

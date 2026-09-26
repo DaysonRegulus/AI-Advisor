@@ -9,7 +9,7 @@ import '../../providers/user_profile_provider.dart';
 import '../../locator.dart';
 
 class AddFoodScreen extends StatefulWidget {
-  const AddFoodScreen({Key? key}) : super(key: key);
+  const AddFoodScreen({super.key});
 
   @override
   _AddFoodScreenState createState() => _AddFoodScreenState();
